@@ -8,7 +8,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Bastion'),
+        title: Text('Crime Analysis'),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -20,22 +20,32 @@ class HomePage extends StatelessWidget {
       body: ListView(
         children: [
           ListTile(
-            leading: Icon(Icons.chat),
-            title: Text('Chats'),
-            onTap: () => Navigator.pushNamed(context, '/chats'),
+            leading: Icon(Icons.timeline),
+            title: Text("Segment Crime on Time and Location"),
+            onTap: ()=>Navigator.pushNamed(context, '/segment'),
           ),
           ListTile(
-            leading: Icon(Icons.video_call),
-            title: Text('Video Call'),
-            onTap: () => Navigator.pushNamed(context, '/video'),
+            leading: Icon(Icons.calendar_today),
+            title: Text("Seasonal Crime Patterns"),
+            onTap: ()=>Navigator.pushNamed(context, '/seasons'),
           ),
           ListTile(
-            leading: Icon(Icons.flash_on),
-            title: Text('Receive Burst'),
-            onTap: () => Navigator.pushNamed(context, '/burst'),
+            leading: Icon(Icons.repeat),
+            title: Text("Recurring Crime Sequences"),
+            onTap: ()=>Navigator.pushNamed(context, '/sequences'),
+          ),
+          ListTile(
+            leading: Icon(Icons.data_exploration),
+            title: Text("Data Used"),
+            onTap: ()=>Navigator.pushNamed(context, '/data'),
+          ),
+          ListTile(
+            leading: Icon(Icons.map_rounded),
+            title: Text("Charts and Heatmaps"),
+            onTap: ()=>Navigator.pushNamed(context, '/charts'),
           ),
         ],
-      ),
+      )
     );
   }
 }

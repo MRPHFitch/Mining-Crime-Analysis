@@ -38,7 +38,7 @@ class CrimeAnalysisAppState extends State<CrimeAnalysisApp>{
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: theMode,
-      initialRoute: isCreated?'/login':'/account',
+      initialRoute: '/home',
       routes: {
         '/home': (context)=>HomePage(toggleTheme: toggleTheme),
         '/segment': (context)=>SegmentPage(),
@@ -47,7 +47,7 @@ class CrimeAnalysisAppState extends State<CrimeAnalysisApp>{
         '/data': (context)=>DataPage(),
         '/charts':(context)=>ChartsPage(),
       },
-      home: HomeScreen(toggleTheme: toggleTheme),
+      home: HomePage(toggleTheme: toggleTheme),
     );
   }
 }
@@ -92,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Crime Analysis to be done..."),
+        title: const Text("Crime Analysis"),
         centerTitle: true,
         actions: [
           IconButton(
