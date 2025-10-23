@@ -37,16 +37,30 @@ def seasonal_crime_patterns():
     
 @app.get("/api/season_analysis")
 def season_analysis():
+    dfLocal=df.copy()
     # Add season column
-    df['date'] = pd.to_datetime(df['date'])
-    df['season'] = df['date'].dt.month.apply(get_season)
+    dfLocal['date'] = pd.to_datetime(df['date'])
+    dfLocal['season'] = df['date'].dt.month.apply(get_season)
+    if dfLocal.empty:
+        return {"error: Dataset is empty."}
+    if len(dfLocal)<10:
+        return {"error: Not large enough for Apriori."}
     
     # --- Apriori Algorithm ---
     # Prepare data for Apriori (one-hot encoding)
-    apriori_df = df[['season', 'crime_type', 'weapon_used']].astype(str)
+    apriori_df = dfLocal[['season', 'crime_type', 'weapon_used']].astype(str)
     onehot = pd.get_dummies(apriori_df)
     frequent_itemsets = apriori(onehot, min_support=0.05, use_colnames=True)
     rules = association_rules(frequent_itemsets, metric="lift", min_threshold=1)
+    #Sort by the strongest association first
+    rules=rules.sort_values(by='lift', ascending=False)
+    
+    #Extract the Top 5 rules
+    top5=apriori_results.head(5).copy()
+    top5['antecedents']=top5['antecedents'].apply(lambda x: list(x))
+    top5['consequents']=top5['consequents'].apply(lambda x: list(x))
+    top5=top5.to_dict(orient='records')
+    
     # Simplify rules for output
     apriori_results = rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']].copy()
     apriori_results['antecedents'] = apriori_results['antecedents'].apply(lambda x: list(x))
@@ -81,13 +95,56 @@ def season_analysis():
         chi2_2, p_2, _, _ = chi2_contingency(contingency2)
     else:
         chi2_2, p_2 = None, None
+        
+    # --- Prepare Chart Data for Frontend ---
+    #Global relationships (heatmap-like data)
+    contingency1 = pd.crosstab(df['season'], df['crime_type'])
+    season_crime_chart = [{
+            "season": season,
+            "crime_counts": contingency1.loc[season].to_dict()
+        }
+        for season in contingency1.index
+    ]
+
+    if 'weapon_used' in df.columns:
+        contingency2 = pd.crosstab(df['season'], df['weapon_used'])
+        season_weapon_chart = [{
+                "season": season,
+                "weapon_counts": contingency2.loc[season].to_dict()
+        }
+        for season in contingency2.index
+        ]
+    else:
+        season_weapon_chart = []
+
+    #Top 5 Apriori rules for bar chart
+    top_df = pd.DataFrame(top5)
+    top_df['rule_label'] = top_df.apply(
+        lambda r: f"{', '.join(r['antecedents'])} → {', '.join(r['consequents'])}", axis=1
+    )
+    top_rules_chart = [
+        {"rule": row["rule_label"], "lift": row["lift"], "confidence": row["confidence"]}
+        for _, row in top_df.iterrows()
+    ]
 
     return {
+        "summary": {
+            "n_records": len(dfLocal),
+            "n_rules": len(apriori_results)
+        },
         "apriori_rules": apriori_results,
+        "top 5 rules": top5,
         "chi_square": {
             "season_vs_crime_type": {"chi2": chi2_1, "p_value": p_1},
             "season_vs_weapon_used": {"chi2": chi2_2, "p_value": p_2}
-        }
+        },
+        "charts": {
+          "global_relationships": {
+              "season_vs_crime_type": season_crime_chart,
+              "season_vs_weapon_used": season_weapon_chart
+          },
+          "top_5_rules_chart": top_rules_chart
+      }
     }
     
 def chi_square_for_rule(df, antecedent, consequent):
@@ -95,5 +152,9 @@ def chi_square_for_rule(df, antecedent, consequent):
     mask_a = df[antecedent[0]] == antecedent[1]
     mask_c = df[consequent[0]] == consequent[1]
     table = pd.crosstab(mask_a, mask_c)
+    if table.shape ==(2,2) and (table.values==0).any():
+        return None, None
+    if mask_a.nunique()<2 or mask_c.nunique()<2:
+        return None, None
     chi2, p, _, _ = chi2_contingency(table)
     return chi2, p
