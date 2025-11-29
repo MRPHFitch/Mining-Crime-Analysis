@@ -1,12 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import pandas as pd
 from scipy.stats import chi2_contingency
+from typing import Optional
+from kmeans import run_hotspot_kmeans
 
 app = FastAPI()
 
 # Load your dataset (FIX PATH)
-df = pd.read_csv('crime_data.csv')
-
+df = pd.read_csv('../datasets/crime_data_2020_to_present.csv')
 
 #Add in the season check for moving forward
 def get_season(month):
@@ -18,6 +20,37 @@ def get_season(month):
         return 'Summer'
     else:
         return 'Fall'
+
+class HotspotRequest(BaseModel):
+    k: int = 5
+    max_iter: int = 100
+    tol: float = 1e-4
+    random_state: Optional[int] = None
+    datetime_col: Optional[str] = None
+    time_col: Optional[str] = None
+    lat_col: Optional[str] = None
+    lon_col: Optional[str] = None
+
+# Cluster crimes into hotspots using K-Means on latitude, longitude, and cyclical time features
+@app.post("/api/hotspots")
+def hotspots(request: HotspotRequest):
+    df_local = df.copy()
+    try:
+        result = run_hotspot_kmeans(
+            df_local,
+            k=request.k,
+            max_iter=request.max_iter,
+            tol=request.tol,
+            random_state=request.random_state,
+            datetime_col=request.datetime_col,
+            time_col=request.time_col,
+            lat_col=request.lat_col,
+            lon_col=request.lon_col,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return result
 
 @app.get("/api/seasons")
 def seasonal_crime_patterns():

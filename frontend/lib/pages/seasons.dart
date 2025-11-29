@@ -4,6 +4,8 @@ import 'dart:convert';
 import '../widgets/crimechart.dart';
 
 class SeasonsPage extends StatefulWidget {
+  const SeasonsPage({super.key});
+
   @override
   _SeasonsPageState createState() => _SeasonsPageState();
 }

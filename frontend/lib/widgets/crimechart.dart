@@ -151,7 +151,7 @@ Widget buildGenericHeatmap({
                     ),
                   ),
                 );
-              }).toList(),
+              }),
             ]);
           }).toList(),
         ),
