@@ -4,13 +4,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-# Columns for crime_data_2020_to_present.csv
-DATE_COL = "DATE OCC"
-TIME_COL = "TIME OCC"
-LAT_COL = "LAT"
-LON_COL = "LON"
-
-# Parse TIME OCC formats like HHMM or HH:MM into a timedelta
+# Parse a few time formats like HHMM or HH:MM into timedelta
 def parse_time(val):
     if pd.isna(val):
         return None
@@ -19,15 +13,21 @@ def parse_time(val):
             hh = int(val) // 100
             mm = int(val) % 100
             return pd.to_timedelta(hh, unit="h") + pd.to_timedelta(mm, unit="m")
-        if isinstance(val, str) and ":" in val:
-            parts = val.split(":")
-            hh = int(parts[0])
-            mm = int(parts[1]) if len(parts) > 1 else 0
-            return pd.to_timedelta(hh, unit="h") + pd.to_timedelta(mm, unit="m")
+        if isinstance(val, str):
+            s = val.strip()
+            if ":" in s:
+                parts = s.split(":")
+                hh = int(parts[0])
+                mm = int(parts[1]) if len(parts) > 1 else 0
+                return pd.to_timedelta(hh, unit="h") + pd.to_timedelta(mm, unit="m")
+            if s.isdigit() and len(s) == 4:
+                hh, mm = int(s[:2]), int(s[2:])
+                return pd.to_timedelta(hh, unit="h") + pd.to_timedelta(mm, unit="m")
         return None
     except Exception:
         return None
 
+# Build feature matrix with lat/lon and time features
 def build_time_location_features(
     df: pd.DataFrame,
     *,
@@ -36,10 +36,10 @@ def build_time_location_features(
     lat_col: Optional[str] = None,
     lon_col: Optional[str] = None,
 ) -> Tuple[np.ndarray, pd.DataFrame]:
-    date_col = datetime_col or DATE_COL
-    time_col_name = time_col or TIME_COL
-    lat_col_name = lat_col or LAT_COL
-    lon_col_name = lon_col or LON_COL
+    date_col = datetime_col
+    time_col_name = time_col
+    lat_col_name = lat_col
+    lon_col_name = lon_col
 
     required = [date_col, time_col_name, lat_col_name, lon_col_name]
     missing = [c for c in required if c not in df.columns]
@@ -55,7 +55,6 @@ def build_time_location_features(
     if working.empty:
         raise ValueError("No rows with valid datetime/lat/lon values")
 
-    # Cyclical encoding for hour and day of week to avoid discontinuities
     hours = working["dt"].dt.hour.fillna(0).astype(float)
     hour_rad = 2 * math.pi * hours / 24.0
     dow = working["dt"].dt.dayofweek.fillna(0).astype(float)
@@ -102,7 +101,7 @@ def kmeans(
     tol: float = 1e-4,
     random_state: Optional[int] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    # Simple K-Means implementation
+    # K-Means implementation
     if k <= 0:
         raise ValueError("k has to be positive")
     if X.shape[0] < k:
@@ -138,7 +137,7 @@ def run_hotspot_kmeans(
     lat_col: Optional[str] = None,
     lon_col: Optional[str] = None,
 ) -> Dict[str, object]:
-    # Build features, run k-means, and return labels + centroids.
+    # Build features, run k-means, and return labels and centroids
     X, cleaned_df = build_time_location_features(
         df,
         datetime_col=datetime_col,
@@ -177,3 +176,41 @@ def run_hotspot_kmeans(
         "counts": cleaned_df["cluster"].value_counts().sort_index().to_dict(),
         "n_rows_used": int(len(cleaned_df)),
     }
+
+# Convert sin/cos back to a value in original period
+def decode_cyclical(sin_val: float, cos_val: float, period: float) -> float:
+    angle = math.atan2(sin_val, cos_val)
+    if angle < 0:
+        angle += 2 * math.pi
+    return (angle / (2 * math.pi)) * period
+
+def centroid_readable(c: Dict[str, float]) -> str:
+    hour = decode_cyclical(c["hour_sin"], c["hour_cos"], 24)
+    dow_value = decode_cyclical(c["dow_sin"], c["dow_cos"], 7)
+    dow_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    dow_label = dow_names[int(round(dow_value)) % 7]
+    return f"hour≈{hour:4.1f} ({dow_label})"
+
+if __name__ == "__main__":
+    df = pd.read_csv("crime_data_cleaned.csv")
+    result = run_hotspot_kmeans(
+        df,
+        datetime_col="date",
+        time_col="time",
+        lat_col="latitude",
+        lon_col="longitude",
+        k=5,
+        random_state=42,
+    )
+    # Print a summary
+    print("Cluster counts:", result["counts"])
+    print("Centroids:")
+    for c in result["centroids"]:
+        readable = centroid_readable(c)
+        print(
+            f"  #{c['cluster']}: "
+            f"lat={c['latitude']:.5f}, lon={c['longitude']:.5f}, "
+            f"hour_sin={c['hour_sin']:.3f}, hour_cos={c['hour_cos']:.3f}, "
+            f"dow_sin={c['dow_sin']:.3f}, dow_cos={c['dow_cos']:.3f} "
+            f"({readable})"
+        )
