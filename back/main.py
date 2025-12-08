@@ -8,7 +8,7 @@ from kmeans import run_hotspot_kmeans
 app = FastAPI()
 
 # Load your dataset (FIX PATH)
-df = pd.read_csv('../datasets/crime_data_2020_to_present.csv')
+df = pd.read_csv('../crime_data_cleaned.csv')
 
 #Add in the season check for moving forward
 def get_season(month):
