@@ -21,8 +21,8 @@ class _SeasonsPageState extends State<SeasonsPage> {
 
   Future<Map<String, dynamic>> fetchAllData() async {
     final responses = await Future.wait([
-      http.get(Uri.parse('http://localhost:8000/api/seasons')),
-      http.get(Uri.parse('http://localhost:8000/api/season_analysis')),
+      http.get(Uri.parse('http://127.0.0.1:8000/api/seasons')),
+      http.get(Uri.parse('http://127.0.0.1:8000/api/season_analysis')),
     ]);
     if (responses[0].statusCode == 200 && responses[1].statusCode == 200) {
       return {
