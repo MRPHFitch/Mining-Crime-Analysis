@@ -1,4 +1,4 @@
-package com.example.comms
+package com.example.crime_analysis
 
 import io.flutter.embedding.android.FlutterActivity
 

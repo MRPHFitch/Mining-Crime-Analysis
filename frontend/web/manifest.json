@@ -1,6 +1,6 @@
 {
-    "name": "comms",
-    "short_name": "comms",
+    "name": "crime_analysis",
+    "short_name": "crime",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
