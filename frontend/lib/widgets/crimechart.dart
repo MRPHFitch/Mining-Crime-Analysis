@@ -16,7 +16,7 @@ String mapCategoryValue(dynamic value, String key) {
 }
 
 /// Generic Crime Bar Chart Widget
-Widget buildCrimeBarChart(BuildContext context, List dataList, {required String categoryKey, int maxCategoriesToShow = 6}) {
+Widget buildCrimeBarChart(BuildContext context, List dataList, {required String categoryKey, int maxCategoriesToShow = 10}) {
   if (dataList.isEmpty) {
     return const Text('No data available.');
   }
@@ -76,7 +76,6 @@ Widget buildCrimeBarChart(BuildContext context, List dataList, {required String 
           color: seasonColors[season],
           width: barWidth,
           borderRadius: BorderRadius.circular(2),
-          // Don't show tooltips directly on rods, use BarTouchTooltipData
         ),
       );
       groupTotal += countForSeason;
@@ -96,11 +95,11 @@ Widget buildCrimeBarChart(BuildContext context, List dataList, {required String 
   }
   
   // Determine max Y value for the chart's axis
-  double maxY = maxGroupTotal * .3; // Add some padding
+  double maxY = maxGroupTotal * .275; // Add some padding
 
   // Calculate the required width for the chart to accommodate all groups and bars
-  // (number of categories * (number of seasons * bar width + (number of seasons - 1) * barsSpace) + (number of categories - 1) * groupSpace)
-  double chartContentWidth = (displayedCategoryNames.length * (orderedSeasons.length * barWidth + (orderedSeasons.length - 1) * barsSpace)) + (displayedCategoryNames.length - 1) * groupSpace;
+  double chartContentWidth = (displayedCategoryNames.length * (orderedSeasons.length * barWidth + 
+  (orderedSeasons.length - 1) * barsSpace)) + (displayedCategoryNames.length - 1) * groupSpace;
   // Add some extra padding to the content width
   chartContentWidth += 50; 
   
@@ -377,14 +376,11 @@ Widget buildGenericHeatmap({
                 ...colLabels.map((colLabel) => SizedBox(
                   width: 80, // Cell width
                   child: Center(
-                    child: RotatedBox(
-                      quarterTurns: -1,
                       child: Text(
-                        colLabel.length > 15 ? '${colLabel.substring(0, 12)}...' : colLabel,
+                        colLabel.length > 25 ? '${colLabel.substring(0, 20)}...' : colLabel,
                         style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.left,
+                        textAlign: TextAlign.center,
                       ),
-                    ),
                   ),
                    )).toList(),
               ],
