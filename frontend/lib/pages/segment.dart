@@ -104,7 +104,7 @@ class _SegmentPageState extends State<SegmentPage> {
           children: [
             Center(
               child: Text(
-                'Number of Hotspots (K)',
+                'Number of Hot spots (K)',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -117,7 +117,7 @@ class _SegmentPageState extends State<SegmentPage> {
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center, // Centers the text within the field
                   decoration: const InputDecoration(
-                    // labelText: 'Number of Hotspots (K)', // Removed labelText
+                    // labelText: 'Number of Hot spots (K)', // Removed labelText
                     hintText: '5', // Shorter hint for a compact field
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(
@@ -154,7 +154,7 @@ class _SegmentPageState extends State<SegmentPage> {
                 child: ListView(
                   children: [
                     Text(
-                      'K-Means Hotspot Results',
+                      'K-Means Hot spot Results',
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 8),
@@ -172,7 +172,7 @@ class _SegmentPageState extends State<SegmentPage> {
                     }),
                     const SizedBox(height: 16),
                     Text(
-                      'Centroids (Hotspot Locations and Times):',
+                      'Centroids (Hot spot Locations and Times):',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     ...(_kmeansResult!['centroids'] as List<dynamic>).map((centroid) {
