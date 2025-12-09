@@ -294,8 +294,8 @@ def get_hotspot_grid():
     min_lon, max_lon = df_grid['longitude'].min(), df_grid['longitude'].max()
 
     # You might want to adjust bin sizes for different granularities
-    lat_bin_size = .01 # e.g., ~1.11 km for lat
-    lon_bin_size = 1 # e.g., ~0.9 km for lon at 34 deg latitude
+    lat_bin_size = .05 # e.g., ~1.11 km for lat
+    lon_bin_size = .05 # e.g., ~0.9 km for lon at 34 deg latitude
 
     lat_bins = np.arange(np.floor(min_lat * 100) / 100, np.ceil(max_lat * 100) / 100 + lat_bin_size, lat_bin_size)
     lon_bins = np.arange(np.floor(min_lon * 100) / 100, np.ceil(max_lon * 100) / 100 + lon_bin_size, lon_bin_size)
@@ -335,3 +335,50 @@ def get_hotspot_grid():
     output_grid.sort(key=lambda x: float(x['lat_band'].split(' ')[0]))
 
     return {"grid": output_grid}
+
+@app.get("/api/time_of_day")
+def get_time_of_day()-> dict[str, int]:
+    """
+    Calculates the distribution of crimes by time of day into 3-hour buckets.
+    Returns a dictionary where keys are time buckets (e.g., "0-3") and values are crime counts.
+    """
+    df_local = df.copy()
+
+    # Ensure 'time' column exists and is parsed to extract hours
+    # The preprocess_data.py script already creates an 'hour' column
+    if 'hour' not in df_local.columns:
+        # Fallback if 'hour' not preprocessed (though it should be)
+        df_local['time'] = pd.to_datetime(df_local['time'], format='%H%M', errors='coerce').dt.time
+        df_local['hour'] = df_local['time'].apply(lambda t: t.hour if pd.notna(t) else np.nan)
+        df_local.dropna(subset=['hour'], inplace=True)
+    
+    if df_local.empty:
+        return {} # Return empty if no valid hour data
+
+    # Define the 3-hour buckets
+    bins = [0, 3, 6, 9, 12, 15, 18, 21, 24]
+    labels = [
+        "0-3", "3-6", "6-9", "9-12",
+        "12-15", "15-18", "18-21", "21-24"
+        ]
+
+    # Use pd.cut to categorize hours into buckets
+    df_local['hour_bucket'] = pd.cut(
+        df_local['hour'],
+        bins=bins,
+        labels=labels,
+        right=False, # Interval is [start, end)
+        include_lowest=True
+    )
+
+    # Count crimes per bucket
+    time_counts = df_local['hour_bucket'].value_counts().sort_index()
+
+    # Convert to dictionary, ensuring all labels are present with 0 if no crimes
+    hour_buckets = {label: 0 for label in labels}
+    for label, count in time_counts.items():
+        if label is not np.nan: # Exclude any unbinned NaNs
+            hour_buckets[label] = int(count)
+
+    return hour_buckets
+    

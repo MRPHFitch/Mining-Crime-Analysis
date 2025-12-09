@@ -184,8 +184,25 @@ Widget buildCrimeBarChart(BuildContext context, List dataList, {required String 
                         reservedSize: 40, // Ensure enough space for Y-axis labels
                       ),
                     ),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: false,
+                        interval: (maxY / 5).ceilToDouble(),
+                        getTitlesWidget: (value, meta) {
+                          return SideTitleWidget(
+                            meta: meta,
+                            child: Text(
+                              value.toInt().toString(),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          );
+                        },
+                        reservedSize: 40,
+                      ),
+                    ),
                   ),
                   gridData: const FlGridData(show: true, drawVerticalLine: false), // Show horizontal grid for readability
                   borderData: FlBorderData(show: false), // Hide border

@@ -12,38 +12,28 @@ class ChartsPage extends StatefulWidget {
   @override
   State<ChartsPage> createState() => _ChartsPageState();
 }
-
+  
 class _ChartsPageState extends State<ChartsPage> {
-  // sample fallback data
-  List<Map<String, dynamic>> _hotspotGrid = const [
-    {
-      "lat_band": "34.00 - 34.05",
-      "values": {"-118.30": 12, "-118.25": 21, "-118.20": 33, "-118.15": 18}
-    },
-    {
-      "lat_band": "34.06 - 34.10",
-      "values": {"-118.30": 8, "-118.25": 14, "-118.20": 27, "-118.15": 11}
-    },
-  ];
-  List<_Hotspot> _hotspots = const [
-    _Hotspot(lat: 34.0522, lon: -118.2437, count: 42),
-    _Hotspot(lat: 34.0407, lon: -118.2690, count: 25),
-    _Hotspot(lat: 34.0739, lon: -118.2390, count: 31),
-  ];
-  bool _loading = true;
+  //Declare Variables
+  List<Map<String, dynamic>> _hotspotGrid = const [];
+  List<_Hotspot> _hotspots = const [];
+  bool _loading = false;
+  Map<String, int> _hourBuckets={};
   String? _error;
+  final baseUrl = 'http://127.0.0.1:8000';
 
   @override
   void initState() {
     super.initState();
-    _loadData();
   }
 
   Future<void> _loadData() async {
-    const baseUrl = 'http://127.0.0.1:8000';
     setState(() {
       _loading = true;
       _error = null;
+      _hotspotGrid=[];
+      _hotspots=[];
+      _hourBuckets={};
     });
 
     try {
@@ -81,6 +71,7 @@ class _ChartsPageState extends State<ChartsPage> {
       }
 
       final gridResp = await http.get(Uri.parse('$baseUrl/api/hotspot_grid'));
+      if(!mounted) return;
       if (gridResp.statusCode == 200) {
         final gridJson = json.decode(gridResp.body) as Map<String, dynamic>;
         final grid = (gridJson['grid'] as List<dynamic>).cast<Map<String, dynamic>>();
@@ -90,6 +81,15 @@ class _ChartsPageState extends State<ChartsPage> {
       } else {
         _error = 'Heatmap request failed (${gridResp.statusCode})';
       }
+      final hourBucketsResp=await http.get(Uri.parse('$baseUrl/api/time_of_day'));
+      if(!mounted) return;
+      if(hourBucketsResp.statusCode==200){
+        final hourBucketsJson=json.decode(hourBucketsResp.body) as Map<String, dynamic>;
+        _hourBuckets=hourBucketsJson.map<String, int>((key, value) => MapEntry(key.toString(), (value as num).toInt()),);
+      }
+      else{
+        _error='Time-of-Day Hist request failed. (${hourBucketsResp.statusCode})';
+      }
     } catch (e) {
       _error = 'Error loading data: $e';
     } finally {
@@ -98,89 +98,113 @@ class _ChartsPageState extends State<ChartsPage> {
       });
     }
   }
-
-  // Sample time-of-day buckets (could be swapped with API results)
-  Map<String, int> get _hourBuckets => const {
-        "0-3": 18,
-        "3-6": 12,
-        "6-9": 25,
-        "9-12": 38,
-        "12-15": 42,
-        "15-18": 51,
-        "18-21": 47,
-        "21-24": 33,
-      };
+  
+  List<Widget> _buildAllCharts(BuildContext context, ThemeData theme) {
+    return [
+      Center(
+        child: Text(
+          'Hotspot Map',
+          style: theme.textTheme.titleLarge,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Card(
+        elevation: 2,
+        child: SizedBox(
+          height: 320,
+          child: _buildHotspotMap(_hotspots), // This function already handles empty data internally
+        ),
+      ),
+      const SizedBox(height: 24),
+      Center(
+        child: Text(
+          'Hotspot Heatmap',
+          style: theme.textTheme.titleLarge,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: _hotspotGrid.isNotEmpty // Conditionally render heatmap
+              ? buildGenericHeatmap(
+                  data: _hotspotGrid,
+                  primaryKey: "lat_band",
+                  valueMapKey: "values",
+                  title: "Crime density by lat/long bucket",
+                  baseColor: Colors.red,
+                  maxColorValue: 60,
+                )
+              : const Center(child: Text('No hotspot heatmap data')),
+        ),
+      ),
+      const SizedBox(height: 24),
+      Center(
+        child: Text(
+          'Time-of-Day Histogram',
+          style: theme.textTheme.titleLarge,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: _hourBuckets.isNotEmpty // Conditionally render histogram
+              ? _buildTimeOfDayHistogram(context, _hourBuckets)
+              : const Center(child: Text('No time-of-day histogram data')),
+        ),
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Charts and Heatmaps')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
-                Text(
-                  'Hotspot Map',
-                  style: theme.textTheme.titleLarge,
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Center(
+            // Place Button
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                side: BorderSide(
+                  color: Theme.of(context).primaryColor,
+                  width: 2,
                 ),
-                const SizedBox(height: 8),
-                Card(
-                  elevation: 2,
-                  child: SizedBox(
-                    height: 320,
-                    child: _buildHotspotMap(_hotspots),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Hotspot Heatmap',
-                  style: theme.textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: buildGenericHeatmap(
-                      data: _hotspotGrid,
-                      primaryKey: "lat_band",
-                      valueMapKey: "values",
-                      title: "Crime density by lat/long bucket",
-                      baseColor: Colors.red,
-                      maxColorValue: 60,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Time-of-Day Histogram',
-                  style: theme.textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: _buildTimeOfDayHistogram(context, _hourBuckets),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Live data from /api/hotspots and /api/hotspot_grid (falls back to sample data on error).',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
+              ),
+              onPressed: _loading ? null : _loadData,
+              child: _loading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Generate'),
             ),
+          ),
+          const SizedBox(height: 16), // Spacing below button
+
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                _error!,
+                style: const TextStyle(color: Colors.red),
+              ),
+            )
+          // If no data is loaded yet (initial state or after clearing data due to error)
+          else if (_hotspots.isEmpty && _hotspotGrid.isEmpty && _hourBuckets.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('Press Button to Generate Maps and Charts'),
+              ),
+            )
+          // If data is loaded and not currently loading, display charts
+          else
+            ..._buildAllCharts(context, theme),
+        ],
+      ),
     );
   }
 }
@@ -297,9 +321,18 @@ Widget _buildTimeOfDayHistogram(BuildContext context, Map<String, int> buckets) 
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 36,
+              interval: (maxY/4).ceilToDouble(),
               getTitlesWidget: (value, meta) => Text(value.toInt().toString()),
             ),
           ),
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 36,
+              interval: (maxY/4).ceilToDouble(),
+              getTitlesWidget: (value, meta)=>Text(value.toInt().toString())
+            )
+          )
         ),
         gridData: FlGridData(show: true, horizontalInterval: (maxY / 5).clamp(1, maxY)),
         borderData: FlBorderData(show: false),

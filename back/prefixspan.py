@@ -32,7 +32,7 @@ class PrefixSpan:
                     return True
         return False
     
-    # fins all single items that meet  minimum frequency threshold
+    # finds all single items that meet  minimum frequency threshold
     def _get_frequent_items(self, sequences: List[List], min_count: int) -> List:
         item_counts = defaultdict(int)
         for seq in sequences:
