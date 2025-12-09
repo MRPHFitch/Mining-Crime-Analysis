@@ -8,23 +8,19 @@ from datetime import timedelta
 class PrefixSpan:
     
     def __init__(self, min_support: float = 0.01):
-        """
-        Args:
-            min_support: Minimum support threshold (as fraction of sequences)
-        """
         self.min_support = min_support
         self.frequent_patterns = []
     
+    # counts how many times a specific pattern appears across all the sequences 
     def _get_support_count(self, pattern: Tuple, sequences: List[List]) -> int:
-        """Count how many sequences contain the pattern as a subsequence"""
         count = 0
         for seq in sequences:
             if self._is_subsequence(pattern, seq):
                 count += 1
         return count
     
+    # checks if pattern is subsequent to sequence 
     def _is_subsequence(self, pattern: Tuple, sequence: List) -> bool:
-        """Check if pattern is a subsequence of sequence"""
         if not pattern:
             return True
         
@@ -36,8 +32,8 @@ class PrefixSpan:
                     return True
         return False
     
+    # fins all single items that meet  minimum frequency threshold
     def _get_frequent_items(self, sequences: List[List], min_count: int) -> List:
-        """Get all frequent 1-items"""
         item_counts = defaultdict(int)
         for seq in sequences:
             seen = set()
@@ -48,60 +44,53 @@ class PrefixSpan:
         
         return [item for item, count in item_counts.items() if count >= min_count]
     
+    # when pattern is found, look at only the data immediately following pattern in dataset
     def _project_database(self, pattern: Tuple, sequences: List[List]) -> List[List]:
-        """Project database based on pattern - get suffixes after pattern occurrence"""
         projected = []
         
         for seq in sequences:
-            # Find pattern in sequence
+            # finding pattern in sequence
             pattern_idx = 0
             for i, item in enumerate(seq):
                 if pattern_idx < len(pattern) and item == pattern[pattern_idx]:
                     pattern_idx += 1
                     if pattern_idx == len(pattern):
-                        # Found complete pattern, add suffix
+
+                        # found complete pattern, add suffix
                         if i + 1 < len(seq):
                             projected.append(seq[i+1:])
                         break
         
         return projected
     
+
+    # recursively explores longer and longer sequences 
     def _prefixspan_recursive(self, pattern: Tuple, sequences: List[List], 
                              min_count: int, results: List):
-        """Recursive PrefixSpan mining"""
-        # Get frequent items in projected database
+
+        # get frequent items in projected database
         freq_items = self._get_frequent_items(sequences, min_count)
         
         for item in freq_items:
-            # Extend pattern
             new_pattern = pattern + (item,)
             support = self._get_support_count(new_pattern, sequences)
             
             if support >= min_count:
                 results.append((new_pattern, support))
                 
-                # Project database and recurse
                 projected = self._project_database(new_pattern, sequences)
                 if projected:
                     self._prefixspan_recursive(new_pattern, projected, min_count, results)
     
+    # cleans up the results, sorts them
     def fit(self, sequences: List[List]) -> List[Tuple]:
-        """
-        Mine frequent sequential patterns
-        
-        Args:
-            sequences: List of sequences (each sequence is a list of items)
-            
-        Returns:
-            List of (pattern, support_count) tuples
-        """
         if not sequences:
             return []
         
         min_count = max(1, int(self.min_support * len(sequences)))
         results = []
         
-        # Start with frequent 1-items
+        # starting with frequent 1-items
         freq_items = self._get_frequent_items(sequences, min_count)
         
         for item in freq_items:
@@ -109,7 +98,7 @@ class PrefixSpan:
             support = self._get_support_count(pattern, sequences)
             results.append((pattern, support))
             
-            # Project and recurse
+            # project and recurse
             projected = self._project_database(pattern, sequences)
             if projected:
                 self._prefixspan_recursive(pattern, projected, min_count, results)
@@ -125,21 +114,10 @@ def prepare_crime_sequences(
     area_col: Optional[str] = None,
     grouping_method: str = 'spatial_temporal'
 ) -> Tuple[List[List], pd.DataFrame]:
-    """
-    Convert crime data into sequences for pattern mining.
-    
-    Args:
-        df: Crime dataframe with date, time, crime_type, etc.
-        time_window_hours: Max hours between crimes to consider them in sequence
-        area_col: Column to use for spatial grouping (e.g., 'AREA NAME')
-        grouping_method: 'spatial_temporal', 'temporal_only', or 'area_based'
-        
-    Returns:
-        Tuple of (sequences, metadata_df)
-    """
+
     df_work = df.copy()
     
-    # Ensure datetime
+    # datetime
     if 'date' in df_work.columns:
         df_work['date'] = pd.to_datetime(df_work['date'], errors='coerce')
     
@@ -155,8 +133,14 @@ def prepare_crime_sequences(
     sequences = []
     sequence_metadata = []
     
+    # define how crimes are grouped into a single "sequence"
+    # temporal_only: groups crimes based on if occurred within  time_window_hours of  previous crime (regardless of location) 
+    # area_based: groups crimes that occur within geographical area and within time window 
+    # spatial_temporal: default. groups crimes spatially close & temporally close (within  time_window_hours)
+    
     if grouping_method == 'temporal_only':
-        # Simple temporal sequences - crimes within time window
+        
+        # groups all nearby crimes by time window regardless of location
         current_seq = []
         seq_start_time = None
         seq_crimes = []
@@ -194,6 +178,7 @@ def prepare_crime_sequences(
                 'crime_indices': seq_crimes
             })
     
+    # groups by a specific area ID 
     elif grouping_method == 'area_based' and area_col and area_col in df_work.columns:
         # Group by area, create sequences within each area
         for area, area_df in df_work.groupby(area_col):
@@ -235,7 +220,7 @@ def prepare_crime_sequences(
                     'crime_indices': seq_crimes
                 })
     
-    else:  # spatial_temporal (default)
+    else:  # spatial_temporal
         # Use lat/lon clustering for spatial proximity
         if 'latitude' in df_work.columns and 'longitude' in df_work.columns:
             # Simple spatial binning (could use your k-means clusters instead!)
@@ -293,23 +278,10 @@ def run_crime_sequence_mining(
     min_support: float = 0.01,
     time_window_hours: int = 24,
     area_col: Optional[str] = None,
-    grouping_method: str = 'spatial_temporal',
+    grouping_method: str = 'area_based',
     max_patterns: int = 50
 ) -> Dict:
-    """
-    Main function to run sequence pattern mining on crime data.
-    
-    Args:
-        df: Crime dataframe
-        min_support: Minimum support threshold (fraction of sequences)
-        time_window_hours: Max hours between crimes in a sequence
-        area_col: Column name for area-based grouping
-        grouping_method: How to group crimes into sequences
-        max_patterns: Maximum number of patterns to return
-        
-    Returns:
-        Dictionary with patterns, statistics, and metadata
-    """
+
     # Prepare sequences
     sequences, metadata_df = prepare_crime_sequences(
         df,
@@ -325,7 +297,7 @@ def run_crime_sequence_mining(
             'message': 'No sequences found with current parameters'
         }
     
-    # Run PrefixSpan
+    # running PrefixSpan algo 
     prefixspan = PrefixSpan(min_support=min_support)
     patterns = prefixspan.fit(sequences)
     
@@ -339,7 +311,7 @@ def run_crime_sequence_mining(
             'length': len(pattern)
         })
     
-    # Statistics
+    # stats
     stats = {
         'n_sequences': len(sequences),
         'n_patterns_found': len(patterns),
@@ -358,21 +330,20 @@ def run_crime_sequence_mining(
 
 
 if __name__ == "__main__":
-    # Test with BOTH datasets combined (like main.py will do)
+
     df = pd.read_csv("../crime_data_cleaned.csv").head(100000)
     #df = pd.read_csv("../crime_safety_cleaned.csv")
     #df = pd.concat([df1, df2], ignore_index=True)
     
-    print(f"\nTesting with combined data: {len(df)} records")
+    print(f"\n Testing with total data: {len(df)} records")
     
     print("\n=== CRIME SEQUENCE PATTERN MINING ===\n")
     
-    # Run with different methods
     result = run_crime_sequence_mining(
         df,
         min_support=0.005,
         time_window_hours=48,
-        grouping_method='spatial_temporal',
+        grouping_method='area_based', #temporal_only, area_based, spatial_temporal
         max_patterns=20
     )
     
