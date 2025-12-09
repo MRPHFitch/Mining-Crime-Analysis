@@ -256,7 +256,7 @@ Widget buildAprioriRulesBarChart(List topRulesChart, {required String metric}) {
   }
   maxY *= 1.2; // Add some padding to maxY
   return SizedBox(
-    height: 350, // Adjust height as needed
+    height: 400, // Adjust height as needed
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
       child: BarChart(
@@ -268,20 +268,28 @@ Widget buildAprioriRulesBarChart(List topRulesChart, {required String metric}) {
               sideTitles: SideTitles(
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
-                  if (value.toInt() >= 0 && value.toInt() < topRulesChart.length) {
-                    final ruleLabel = topRulesChart[value.toInt()]['rule'] as String;
-                    return RotatedBox(
-                      quarterTurns: -1, // Rotate labels
-                      child: Text(
-                        ruleLabel,
-                        style: const TextStyle(fontSize: 14), // Slightly smaller font for rules
+                  if (value.toInt() >= 0 &&
+                      value.toInt() < topRulesChart.length) {
+                    final ruleLabel =
+                        topRulesChart[value.toInt()]['rule'] as String;
+                    return SideTitleWidget(
+                      meta: meta,
+                      space: 8,
+                      child: SizedBox(
+                        width: 100, // ← adjust until labels wrap nicely
+                        child: Text(
+                          ruleLabel,
+                          style: const TextStyle(fontSize: 10),
+                          softWrap: true,
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                       );
-                       }
+                    );
+                  }
                   return const Text('');
                 },
                 interval: 1,
-                reservedSize: 100, // More space for rule labels
+                reservedSize: 150, // More space for rule labels
               ),
             ),
             leftTitles: AxisTitles(

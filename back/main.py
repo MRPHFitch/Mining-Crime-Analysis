@@ -1,4 +1,3 @@
-# File: /Users/Phoo/Classes/Data Mining/Project/Mining-Crime-Analysis/back/main.py
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pandas as pd
@@ -12,7 +11,7 @@ app = FastAPI()
 
 # Load your dataset (FIX PATH)
 df = pd.read_csv('../crime_data_cleaned.csv')
-THRESHOLD=2000
+safetyDF = pd.read_csv('../crime_safety_cleaned.csv')
 
 #Add in the season check for moving forward
 def get_season(month):
@@ -250,3 +249,29 @@ def season_analysis():
           "top_5_rules_chart": top_rules_chart
       }
     }
+    
+# Add a new endpoint to preview the cleaned data
+@app.get("/api/cleaned_data_preview")
+def get_cleaned_data_preview():
+    """
+    Returns the first 20 rows of the cleaned crime data.
+    """
+    if safetyDF.empty:
+        raise HTTPException(status_code=404, detail="Cleaned data is not available.")
+    
+    display_columns = [
+        'date', 'time', 'crime_type', 'weapon_used', 'city', 'state',
+        'victim_age', 'victim_gender', 'victim_race', 'season'
+    ]
+    
+    # Use safetyDF instead of df
+    available_columns = [col for col in display_columns if col in safetyDF.columns]
+    
+    preview_df = (
+    safetyDF[available_columns]
+    .assign(date=lambda df: pd.to_datetime(df['date'], errors='coerce'))
+    .sort_values('date')
+    .assign(date=lambda df: df['date'].dt.strftime('%Y-%m-%d'))
+    .head(20)
+)
+    return preview_df.to_dict(orient='records')
