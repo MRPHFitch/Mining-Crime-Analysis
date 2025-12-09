@@ -1,6 +1,5 @@
-// Filepath: /Users/Phoo/Classes/Data Mining/Project/Mining-Crime-Analysis/frontend/lib/pages/seasons.dart
 import 'package:flutter/material.dart';
-import 'package:crime_analysis/widgets/crimechart.dart'; // Ensure this import is correct
+import 'package:crime_analysis/widgets/crimechart.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -150,7 +149,7 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Exploratory Analysis (Tables)', style: Theme.of(context).textTheme.headlineSmall),
+        Center(child: Text('Exploratory Analysis', style: Theme.of(context).textTheme.headlineSmall)),
         const SizedBox(height: 16),
         _buildSeasonCategoryStatsTable(seasonCrime, 'crime_type', 'Crime Stats by Season'),
         const SizedBox(height: 24),
@@ -184,7 +183,7 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
           const Center(
             child: Padding(
               padding: EdgeInsets.all(16.0),
-              child: Text('Press "Run Apriori Analysis" to see data mining results.'),
+              child: Text('Press button to see data mining results.'),
             ),
           )
       ],
@@ -200,16 +199,16 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Data Mining Analysis (Tables)', style: Theme.of(context).textTheme.headlineSmall),
+        Center(child: Text('Data Mining Analysis', style: Theme.of(context).textTheme.headlineSmall)),
         const SizedBox(height: 16),
         Text('Chi-Square Tests:', style: const TextStyle(fontWeight: FontWeight.bold)),
         Text('Season vs Crime Type: Chi2=${chiSquare['season_vs_crime_type']['chi2']?.toStringAsFixed(2)}, P-value=${chiSquare['season_vs_crime_type']['p_value']?.toStringAsFixed(3)}'),
         Text('Season vs Weapon Used: Chi2=${chiSquare['season_vs_weapon_used']['chi2']?.toStringAsFixed(2)}, P-value=${chiSquare['season_vs_weapon_used']['p_value']?.toStringAsFixed(3)}'),
         const SizedBox(height: 16),
-        Text('All Apriori Rules:', style: const TextStyle(fontWeight: FontWeight.bold)),
+        Center(child: Text('All Apriori Rules:', style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 18))),
         SingleChildScrollView(scrollDirection: Axis.horizontal, child: buildAprioriTable(aprioriRules)),
         const SizedBox(height: 16),
-        Text('Top 5 Apriori Rules:', style: const TextStyle(fontWeight: FontWeight.bold)),
+        Center(child: Text('Top 5 Apriori Rules:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
         SingleChildScrollView(scrollDirection: Axis.horizontal, child: buildAprioriTable(top5Rules)),
       ],
     );
@@ -224,13 +223,13 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Center(child: Text('Exploratory Analysis', style: Theme.of(context).textTheme.headlineSmall)),
+        Center(child:Text('Exploratory Analysis', style: Theme.of(context).textTheme.headlineSmall)),
         const SizedBox(height: 16),
-        Center(child: Text('Crime Types by Season', style: const TextStyle(fontWeight: FontWeight.bold))),
-        Center(child: buildCrimeBarChart(seasonCrime, categoryKey: 'crime_type')), // Actual chart
+        Center(child:Text('Crime Types by Season', style: const TextStyle(fontWeight: FontWeight.bold))),
+        buildCrimeBarChart(context, seasonCrime, categoryKey: 'crime_type'), // Pass context
         const SizedBox(height: 16),
-        Center(child: Text('Weapon Usage by Season', style: const TextStyle(fontWeight: FontWeight.bold))),
-        Center(child: buildCrimeBarChart(seasonWeapon, categoryKey: 'weapon_used')), // Actual chart
+        Center(child:Text('Weapon Usage by Season', style: const TextStyle(fontWeight: FontWeight.bold))),
+        buildCrimeBarChart(context, seasonWeapon, categoryKey: 'weapon_used'), // Pass context
         const SizedBox(height: 24),
         const Divider(),
         const SizedBox(height: 24),
@@ -260,7 +259,7 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
           const Center(
             child: Padding(
               padding: EdgeInsets.all(16.0),
-              child: Text('Press button to see data mining results.'),
+              child: Text('Push button to see data mining results.'),
             ),
           )
       ],
@@ -283,10 +282,9 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Data Mining Analysis (Graphs)', style: Theme.of(context).textTheme.headlineSmall),
+        Center(child:Text('Data Mining Analysis', style: Theme.of(context).textTheme.headlineSmall)),
         const SizedBox(height: 16),
-        
-        Text('Relationship between Season and Crime Type (Heatmap)', style: const TextStyle(fontWeight: FontWeight.bold)),
+        Center(child:Text('Season and Crime Type Heatmap', style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 16))),
         const SizedBox(height: 8),
         buildGenericHeatmap(
           data: seasonVsCrimeData,
@@ -296,29 +294,27 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
           maxColorValue: 1000, // <<-- ADJUST THIS VALUE based on maximum crime counts in your data
         ),
         const SizedBox(height: 16),
-        
-        Text('Relationship between Season and Weapon Used (Heatmap)', style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
+        Center(child:Text('Season and Weapon Used Heatmap', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+        const SizedBox(height: 16),
         buildGenericHeatmap(
           data: seasonVsWeaponData,
           primaryKey: 'season',
           valueMapKey: 'weapon_counts',
           title: 'Weapon Usage by Season',
-          maxColorValue: 500, // <<-- ADJUST THIS VALUE based on maximum weapon usage counts in your data
+          maxColorValue: 500, // <<--ADJUST THIS VALUE based on maximum weapon usage counts in your data
         ),
         const SizedBox(height: 16),
-
-        Text('Top 5 Apriori Rules (Lift)', style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
+        Center(child:Text('Top 5 Apriori Rules (Lift)', style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 16))),
+        const SizedBox(height: 16),
         buildAprioriRulesBarChart(top5RulesChart, metric: 'lift'),
         const SizedBox(height: 16),
-
-        Text('Top 5 Apriori Rules (Confidence)', style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
+        Center(child:Text('Top 5 Apriori Rules (Confidence)', style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 16))),
+        const SizedBox(height: 16),
         buildAprioriRulesBarChart(top5RulesChart, metric: 'confidence'),
       ],
     );
   }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -351,7 +347,7 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
               _buildTablesContent(exploratory),
               // Tab 2: Graphs View
               _buildGraphsContent(exploratory),
-            ],
+           ],
           );
         },
       ),

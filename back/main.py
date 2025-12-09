@@ -12,7 +12,7 @@ app = FastAPI()
 
 # Load your dataset (FIX PATH)
 df = pd.read_csv('../crime_data_cleaned.csv')
-print(f"DEBUG: Initial DataFrame columns: {df.columns.tolist()}") # Debug print
+THRESHOLD=2000
 
 #Add in the season check for moving forward
 def get_season(month):
@@ -204,13 +204,7 @@ def season_analysis():
         contingency2 = pd.crosstab(dfLocal['season'], dfLocal['weapon_used']) # Use dfLocal
         if not contingency2.empty and contingency2.shape[0] > 1 and contingency2.shape[1] > 1:
             chi2_2, p_2, _, _ = chi2_contingency(contingency2)
-            season_weapon_chart = [{
-                    "season": season,
-                    "weapon_counts": contingency2.loc[season].to_dict()
-            }
-            for season in contingency2.index
-            ]
-        
+            
     # --- Prepare Chart Data for Frontend ---
     #Global relationships (heatmap-like data)
     season_crime_chart = []
@@ -220,6 +214,12 @@ def season_analysis():
                 "crime_counts": contingency1.loc[season].to_dict()
             }
             for season in contingency1.index
+        ]
+    season_weapon_chart = [{
+        "season": season,
+        "weapon_counts": contingency2.loc[season].to_dict()
+        }
+        for season in contingency2.index
         ]
 
     #Top 5 Apriori rules for bar chart

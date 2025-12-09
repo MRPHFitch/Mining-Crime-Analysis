@@ -2,110 +2,223 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-// Helper function to map category values to readable strings (kept for consistency, defined in chart widget scope)
+// Helper function to map category values to readable strings and truncate if too long
 String mapCategoryValue(dynamic value, String key) {
   if (key == 'weapon_used') {
-    if (value == 0) return 'No Weapon Used';
+    if (value == 0) return 'No Weapon'; // More concise for chart labels
     if (value == 1) return 'Weapon Used';
   }
-  return value.toString();
+  String label = value.toString();
+  // Truncate long labels for better readability in grouped charts
+  if (label.length > 15) {
+    return '${label.substring(0, 12)}...';
+  }
+  return label;
 }
 
-/// Generic Crime Bar Chart Widget
-Widget buildCrimeBarChart(List dataList, {required String categoryKey, int maxCategories = 5}) {
+/// Generic Crime Bar Chart Widget - Now a GROUPED BAR CHART
+Widget buildCrimeBarChart(BuildContext context, List dataList, {required String categoryKey, int maxCategoriesToShow = 6}) {
   if (dataList.isEmpty) {
-    return Text('No data available for $categoryKey.');
+    return const Text('No data available.');
   }
 
-  final seasons = dataList.map((e) => e['season']).toSet().toList();
-  // Calculate total counts per category across all seasons
-  final Map<String, double> totalCountsPerCategory = {};
+  // Define a consistent order and color for seasons
+  final List<String> orderedSeasons = ['Winter', 'Spring', 'Summer', 'Fall'];
+  final Map<String, Color> seasonColors = {
+    'Winter': Colors.lightBlue.shade300,
+    'Spring': Colors.lightGreen.shade300,
+    'Summer': Colors.orange.shade300,
+    'Fall': Colors.brown.shade300,
+  };
+
+  // Group counts by category and then by season
+  // Map<CategoryName, Map<SeasonName, Count>>
+  final Map<String, Map<String, double>> countsPerCategoryPerSeason = {};
   for (var item in dataList) {
     final category = mapCategoryValue(item[categoryKey], categoryKey);
-    final count = (item['count'] as int).toDouble();
-    totalCountsPerCategory.update(category, (value) => value + count, ifAbsent: () => count);
+    final season = item['season'] as String;
+    final count = (item['count'] ?? 0) as int;
+
+    countsPerCategoryPerSeason.putIfAbsent(category, () => {});
+    countsPerCategoryPerSeason[category]!.update(season, (value) => value + count, ifAbsent: () => count.toDouble());
   }
 
-  // Sort categories by total count and take the top N
-  final sortedCategories = totalCountsPerCategory.entries.toList()
-    ..sort((a, b) => b.value.compareTo(a.value));
-  final displayedCategories = sortedCategories.take(maxCategories).map((e) => e.key).toList();
+  // Calculate total counts per category across ALL seasons to find top N categories
+  final Map<String, double> totalCountsPerCategory = {};
+  countsPerCategoryPerSeason.forEach((category, seasonCounts) {
+    totalCountsPerCategory[category] = seasonCounts.values.fold(0.0, (sum, count) => sum + count);
+  });
 
-  // Prepare BarChartGroupData for only the displayed categories
+  // Sort categories by total count and take the top N
+  final sortedCategoryEntries = totalCountsPerCategory.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+
+  final displayedCategoryNames = sortedCategoryEntries.take(maxCategoriesToShow).map((e) => e.key).toList();
+
   final List<BarChartGroupData> barGroups = [];
-  for (int i = 0; i < displayedCategories.length; i++) {
-    final category = displayedCategories[i];
-    final totalCount = totalCountsPerCategory[category] ?? 0;
+  double maxGroupTotal = 0;
+  final double barWidth = 8; // Width of each individual bar within a group
+  final double barsSpace = 2; // Space between bars within a group
+  final double groupSpace = 20; // Space between groups of bars
+
+  for (int i = 0; i < displayedCategoryNames.length; i++) {
+    final categoryName = displayedCategoryNames[i];
+    final Map<String, double> seasonCounts = countsPerCategoryPerSeason[categoryName] ?? {};
+
+    final List<BarChartRodData> rods = [];
+    double groupTotal = 0;
+
+    // Create a bar for each season within this category, in consistent order
+    for (var season in orderedSeasons) {
+      final countForSeason = seasonCounts[season] ?? 0.0;
+      rods.add(
+        BarChartRodData(
+          toY: countForSeason,
+          color: seasonColors[season],
+          width: barWidth,
+          borderRadius: BorderRadius.circular(2),
+          // Don't show tooltips directly on rods, use BarTouchTooltipData
+        ),
+      );
+      groupTotal += countForSeason;
+    }
 
     barGroups.add(
       BarChartGroupData(
-        x: i, // Use index as X value
-        barRods: [
-          BarChartRodData(
-            toY: totalCount,
-            color: Colors.blueAccent, // Customize bar color
-            width: 25, // Increased bar width for better visibility
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ],
-        // showingTooltipIndicators: [0], // Uncomment if you want tooltips, but might clutter small charts
+        x: i, // X-axis position for this group
+        barRods: rods,
+        barsSpace: barsSpace, // Space between rods in a group
+        groupVertically: false, // Ensure bars are side-by-side
       ),
     );
+    if (groupTotal > maxGroupTotal) {
+      maxGroupTotal = groupTotal;
+    }
   }
   
   // Determine max Y value for the chart's axis
-  double maxY = totalCountsPerCategory.values.isEmpty ? 0 : totalCountsPerCategory.values.reduce(
-      (curr, next) => curr > next ? curr : next
-  ) * 1.2; // Add some padding
+  double maxY = maxGroupTotal * .3; // Add some padding
 
-  return SizedBox(
-    height: 1000, // Increased height for more space
-    child: BarChart(
-      BarChartData(
-        barGroups: barGroups,
-        titlesData: FlTitlesData(
-          show: true,
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              getTitlesWidget: (value, meta) {
-                // Display category names on the bottom axis
-                if (value.toInt() >= 0 && value.toInt() < displayedCategories.length) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 25.0), // Increased padding
-                    child: RotatedBox(
-                      quarterTurns: -1, // Rotate labels if they are long
-                      child: Text(
-                        displayedCategories[value.toInt()],
-                        style: const TextStyle(fontSize: 18),
+  // Calculate the required width for the chart to accommodate all groups and bars
+  // (number of categories * (number of seasons * bar width + (number of seasons - 1) * barsSpace) + (number of categories - 1) * groupSpace)
+  double chartContentWidth = (displayedCategoryNames.length * (orderedSeasons.length * barWidth + (orderedSeasons.length - 1) * barsSpace)) + (displayedCategoryNames.length - 1) * groupSpace;
+  // Add some extra padding to the content width
+  chartContentWidth += 50; 
+  
+  return Column(
+    children: [
+      // Legend for seasons
+      Padding(
+        padding: const EdgeInsets.only(bottom: 8.0),
+        child: Wrap(
+          spacing: 12.0,
+          runSpacing: 4.0,
+          children: orderedSeasons.map((season) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 16,
+                height: 16,
+                color: seasonColors[season],
+              ),
+              const SizedBox(width: 4),
+              Text(season, style: const TextStyle(fontSize: 12)),
+            ],
+          )).toList(),
+        ),
+      ),
+      SizedBox(
+        height: 500, // Increased height for more space for labels and chart
+        width: MediaQuery.of(context).size.width, // Take full width initially
+        child: SingleChildScrollView( // Allow horizontal scrolling if bars get too wide
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: chartContentWidth > MediaQuery.of(context).size.width
+                   ? chartContentWidth : MediaQuery.of(context).size.width, // Ensure width is at least screen width or calculated content width
+            child: Padding( // Add padding around the chart itself
+              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
+              child: BarChart(
+                BarChartData(
+                  barGroups: barGroups,
+                  titlesData: FlTitlesData(
+                    show: true,
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() >= 0 && value.toInt() < displayedCategoryNames.length) {
+                            return SideTitleWidget(
+                              meta: meta,
+                              space: 10, // space between labels and axis
+                              child: RotatedBox(
+                                quarterTurns: -1, // Rotate labels for better fit
+                                child: Text(
+                                  displayedCategoryNames[value.toInt()],
+                                  style: const TextStyle(fontSize: 12), // Increased font size
+                                ),
+                              ),
+                            );
+                          }
+                          return const Text('');
+                        },
+                        interval: 1, // Show every label
+                        reservedSize: 80, // Increased reserved space for rotated labels
                       ),
                     ),
-                  );
-                }
-                return const Text('');
-              },
-              interval: 1, // Show every label
-              reservedSize: 200, // Increased reserved space for labels
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: (maxY / 5).ceilToDouble(), // Dynamic interval for Y-axis
+                        getTitlesWidget: (value, meta) {
+                          return SideTitleWidget(
+                            meta: meta,
+                            space: 10,
+                            child: Text(
+                              value.toInt().toString(),
+                              style: const TextStyle(fontSize: 12), // Increased font size
+                            ),
+                          );
+                        },
+                        reservedSize: 40, // Ensure enough space for Y-axis labels
+                      ),
+                    ),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  gridData: const FlGridData(show: true, drawVerticalLine: false), // Show horizontal grid for readability
+                  borderData: FlBorderData(show: false), // Hide border
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: maxY,
+                  barTouchData: BarTouchData(
+                    enabled: true,
+                    touchTooltipData: BarTouchTooltipData(
+                      tooltipPadding: const EdgeInsets.all(8),
+                      tooltipMargin: 8,
+                      getTooltipColor: (group) => Colors.blueGrey, // NEW way to set bg color,
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        final category = displayedCategoryNames[group.x.toInt()];
+                        final season = orderedSeasons[rodIndex];
+                        final count = rod.toY.toInt();
+                        return BarTooltipItem(
+                          '$category\n',
+                          const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          children: <TextSpan>[
+                            TextSpan(
+                              text: '$season: $count',
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              interval: (maxY / 5).ceilToDouble(), // Show 5 labels on Y-axis
-              getTitlesWidget: (value, meta) {
-                return Text(value.toInt().toString(), style: const TextStyle(fontSize: 10));
-              },
-            ),
-          ),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
-        gridData: const FlGridData(show: false), // Hide grid lines
-        borderData: FlBorderData(show: false), // Hide border
-        alignment: BarChartAlignment.spaceAround,
-        maxY: maxY,
       ),
-    ),
+    ],
   );
 }
 
@@ -118,7 +231,6 @@ Widget buildAprioriRulesBarChart(List topRulesChart, {required String metric}) {
   }
   final List<BarChartGroupData> barGroups = [];
   double maxY = 0;
-
   for (int i = 0; i < topRulesChart.length; i++) {
     final rule = topRulesChart[i];
     final value = (rule[metric] as num).toDouble();
@@ -133,7 +245,7 @@ Widget buildAprioriRulesBarChart(List topRulesChart, {required String metric}) {
         barRods: [
           BarChartRodData(
             toY: value,
-            color: metric == 'lift' ? Colors.green[400] : Colors.purple[400], // Different color for lift/confidence
+            color: metric == 'lift' ? Colors.cyan : Colors.purple[400], // Different color for lift/confidence
             width: 15,
             borderRadius: BorderRadius.circular(4),
           ),
@@ -143,7 +255,6 @@ Widget buildAprioriRulesBarChart(List topRulesChart, {required String metric}) {
     );
   }
   maxY *= 1.2; // Add some padding to maxY
-
   return SizedBox(
     height: 350, // Adjust height as needed
     child: Padding(
@@ -163,10 +274,10 @@ Widget buildAprioriRulesBarChart(List topRulesChart, {required String metric}) {
                       quarterTurns: -1, // Rotate labels
                       child: Text(
                         ruleLabel,
-                        style: const TextStyle(fontSize: 10), // Slightly smaller font for rules
+                        style: const TextStyle(fontSize: 14), // Slightly smaller font for rules
                       ),
                        );
-                  }
+                       }
                   return const Text('');
                 },
                 interval: 1,
@@ -180,7 +291,7 @@ Widget buildAprioriRulesBarChart(List topRulesChart, {required String metric}) {
                 getTitlesWidget: (value, meta) {
                   return Text(
                     value.toStringAsFixed(2), // Show value with 2 decimal places
-                    style: const TextStyle(fontSize: 10),
+                    style: const TextStyle(fontSize: 12),
                   );
                 },
                 reservedSize: 40,
@@ -188,7 +299,7 @@ Widget buildAprioriRulesBarChart(List topRulesChart, {required String metric}) {
             ),
             topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
+            ),
           gridData: const FlGridData(show: true, drawVerticalLine: false),
           borderData: FlBorderData(show: false),
           alignment: BarChartAlignment.spaceAround,
@@ -196,21 +307,21 @@ Widget buildAprioriRulesBarChart(List topRulesChart, {required String metric}) {
         ),
       ),
     ),
-  );
+    );
 }
 
-/// Generic heatmap widget (kept as placeholder)
+/// Generic heatmap widget
 Widget buildGenericHeatmap({
   required List<Map<String, dynamic>> data,
   required String primaryKey, // e.g., 'season'
   required String valueMapKey, // e.g., 'crime_counts' or 'weapon_counts'
   String? title,
   double maxColorValue = 1000, // Default max value; adjust based on your data's actual max counts
+  Color baseColor = Colors.cyan,
 }) {
   if (data.isEmpty) {
-    return const Text("No data available for heatmap.");
+    return const Text("No data available.");
   }
-
   // Extract all unique row and column labels
   final List<String> rowLabels = data.map((e) => e[primaryKey] as String).toList()..sort();
   Set<String> allColLabelsSet = {};
@@ -264,7 +375,7 @@ Widget buildGenericHeatmap({
                       ),
                     ),
                   ),
-                )).toList(),
+                   )).toList(),
               ],
             ),
             const Divider(height: 1, thickness: 1),
@@ -285,7 +396,6 @@ Widget buildGenericHeatmap({
                     // Scale color based on count
                     final double normalizedCount = count / maxColorValue;
                     final Color cellColor = Color.lerp(Colors.white, Colors.red[700], normalizedCount)!;
-
                     return Container(
                       width: 80,
                       height: 30, // Cell height
@@ -308,7 +418,7 @@ Widget buildGenericHeatmap({
               );
             }).toList(),
             ],
-        ),
+            ),
       ),
     ],
   );
