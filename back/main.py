@@ -108,8 +108,8 @@ def seasonal_crime_patterns():
         "season_weapon": season_weapon if isinstance(season_weapon, list) else season_weapon.to_dict(orient='records')
     }
 
-@app.get("/api/season_analysis")
-def season_analysis():
+@app.get("/api/weather_analysis")
+def weather_analysis():
     dfLocal = df.copy() # Use a local copy
     # Add season column
     dfLocal['date'] = pd.to_datetime(dfLocal['date']) # Corrected: Use dfLocal for modification
@@ -261,7 +261,7 @@ def get_cleaned_data_preview():
     
     display_columns = [
         'date', 'time', 'crime_type', 'weapon_used', 'city', 'state',
-        'victim_age', 'victim_gender', 'victim_race', 'season'
+        'victim_age', 'victim_gender', 'victim_race', 'season', 'is_weekend'
     ]
     
     # Use safetyDF instead of df

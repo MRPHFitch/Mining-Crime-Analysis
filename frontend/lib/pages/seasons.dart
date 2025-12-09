@@ -52,7 +52,7 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
     });
 
     try {
-      final response = await http.get(Uri.parse('http://127.0.0.1:8000/api/season_analysis'));
+      final response = await http.get(Uri.parse('http://127.0.0.1:8000/api/weather_analysis'));
       if (response.statusCode == 200) {
         setState(() {
           _aprioriResult = json.decode(response.body) as Map<String, dynamic>;

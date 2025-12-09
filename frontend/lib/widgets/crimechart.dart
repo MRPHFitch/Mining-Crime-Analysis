@@ -1,4 +1,3 @@
-// Filepath: /Users/Phoo/Classes/Data Mining/Project/Mining-Crime-Analysis/frontend/lib/widgets/crimechart.dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -10,13 +9,13 @@ String mapCategoryValue(dynamic value, String key) {
   }
   String label = value.toString();
   // Truncate long labels for better readability in grouped charts
-  if (label.length > 15) {
-    return '${label.substring(0, 12)}...';
+  if (label.length > 25) {
+    return '${label.substring(0, 20)}...';
   }
   return label;
 }
 
-/// Generic Crime Bar Chart Widget - Now a GROUPED BAR CHART
+/// Generic Crime Bar Chart Widget
 Widget buildCrimeBarChart(BuildContext context, List dataList, {required String categoryKey, int maxCategoriesToShow = 6}) {
   if (dataList.isEmpty) {
     return const Text('No data available.');
@@ -146,15 +145,19 @@ Widget buildCrimeBarChart(BuildContext context, List dataList, {required String 
                       sideTitles: SideTitles(
                         showTitles: true,
                         getTitlesWidget: (value, meta) {
-                          if (value.toInt() >= 0 && value.toInt() < displayedCategoryNames.length) {
+                          if (value.toInt() >= 0 &&
+                              value.toInt() < displayedCategoryNames.length) {
                             return SideTitleWidget(
                               meta: meta,
-                              space: 10, // space between labels and axis
-                              child: RotatedBox(
-                                quarterTurns: -1, // Rotate labels for better fit
+                              space: 15, // space between labels and axis
+                              child: SizedBox(
+                                width: 100, // adjust width for wrapping
                                 child: Text(
                                   displayedCategoryNames[value.toInt()],
-                                  style: const TextStyle(fontSize: 12), // Increased font size
+                                  style: const TextStyle(fontSize: 12),
+                                  softWrap: true, // allow wrapping
+                                  textAlign: TextAlign
+                                      .center, // center the wrapped text
                                 ),
                               ),
                             );

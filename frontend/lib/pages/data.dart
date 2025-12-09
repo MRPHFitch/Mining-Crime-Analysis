@@ -1,4 +1,3 @@
-// File: /Users/Phoo/Classes/Data Mining/Project/Mining-Crime-Analysis/frontend/lib/pages/data_used.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -53,18 +52,25 @@ class _DataPageState extends State<DataPage> {
           final columns = data.first.keys.toList();
 
           return SingleChildScrollView(
-            scrollDirection: Axis.vertical, // Enable vertical scrolling for the whole table content
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal, // Enable horizontal scrolling for wide tables
-              child: DataTable(
-                columns: columns.map((col) => DataColumn(label: Text(col))).toList(),
-                rows: data.map((row) {
-                  return DataRow(
-                    cells: columns.map((col) {
-                      return DataCell(Text(row[col]?.toString() ?? ''));
-                    }).toList(),
-                  );
-                }).toList(),
+            scrollDirection: Axis
+                .vertical, // Enable vertical scrolling for the whole table content
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width,
+              child: SingleChildScrollView(
+                scrollDirection: Axis
+                    .horizontal, // Enable horizontal scrolling for wide tables
+                child: DataTable(
+                  columns: columns
+                      .map((col) => DataColumn(label: Text(col)))
+                      .toList(),
+                  rows: data.map((row) {
+                    return DataRow(
+                      cells: columns.map((col) {
+                        return DataCell(Text(row[col]?.toString() ?? ''));
+                      }).toList(),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
           );
