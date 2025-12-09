@@ -454,7 +454,7 @@ Widget buildAprioriTable(List aprioriRules, {bool showOnlyTop5 = false}) {
   return DataTable(
     columns: const [
       DataColumn(label: Text('Antecedents')),
-      DataColumn(label: Text('Consequent')),
+      DataColumn(label: Text('Consequents')),
       DataColumn(label: Text('Support')),
       DataColumn(label: Text('Confidence')),
       DataColumn(label: Text('Lift')),
@@ -462,7 +462,7 @@ Widget buildAprioriTable(List aprioriRules, {bool showOnlyTop5 = false}) {
     rows: displayRules.map<DataRow>((rule) {
       return DataRow(cells: [
         DataCell(Text(rule['antecedents'].toString())),
-        DataCell(Text(rule['consequent'].toString())),
+        DataCell(Text(rule['consequents'].toString())),
         DataCell(Text(rule['support'].toStringAsFixed(2))),
         DataCell(Text(rule['confidence'].toStringAsFixed(2))),
         DataCell(Text(rule['lift'].toStringAsFixed(2))),
