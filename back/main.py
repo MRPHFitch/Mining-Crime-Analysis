@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pandas as pd
+import numpy as np
 from scipy.stats import chi2_contingency
 from typing import Optional
 from kmeans import run_hotspot_kmeans
-# ADD THESE IMPORTS for Apriori functionality:
 from mlxtend.frequent_patterns import apriori, association_rules
 
 app = FastAPI()
@@ -112,9 +112,8 @@ def seasonal_crime_patterns():
 def weather_analysis():
     dfLocal = df.copy() # Use a local copy
     # Add season column
-    dfLocal['date'] = pd.to_datetime(dfLocal['date']) # Corrected: Use dfLocal for modification
-    dfLocal['season'] = dfLocal['date'].dt.month.apply(get_season) # Corrected: Use dfLocal for modification
-    print(f"DEBUG: dfLocal columns before Apriori: {dfLocal.columns.tolist()}") # Debug print
+    dfLocal['date'] = pd.to_datetime(dfLocal['date'])
+    dfLocal['season'] = dfLocal['date'].dt.month.apply(get_season)
     
     if dfLocal.empty:
         raise HTTPException(status_code=400, detail="Dataset is empty after date processing.")
@@ -138,8 +137,8 @@ def weather_analysis():
     if onehot.empty:
         raise HTTPException(status_code=400, detail='No suitable data for Apriori after encoding.')
     
-    frequent_itemsets_df = pd.DataFrame() # Use distinct name
-    rules_df = pd.DataFrame() # Use distinct name
+    frequent_itemsets_df = pd.DataFrame()
+    rules_df = pd.DataFrame()
     apriori_results = [] # Initialize as empty list for output
     top5 = [] # Initialize as empty list for output
 
@@ -161,7 +160,6 @@ def weather_analysis():
         processed_rules_df['consequents'] = processed_rules_df['consequents'].apply(lambda x: list(x))
         
         apriori_results = processed_rules_df.to_dict(orient='records')
-        print(f"DEBUG: Full apriori_results (first 3 rules): {apriori_results[:3]}") # Debug print
       
         #Extract the Top 5 rules
         top5_df = processed_rules_df.head(5).copy() # Use processed_rules_df
@@ -176,11 +174,9 @@ def weather_analysis():
         if len(rule['antecedents']) == 1 and len(rule['consequents']) == 1:
             antecedent_str = rule['antecedents'][0]
             consequent_str = rule['consequents'][0]
-            print(f"DEBUG: Processing antecedent_str='{antecedent_str}', consequent_str='{consequent_str}'") # Debug print
             
             antecedent = parse_onehot(antecedent_str)
             consequent = parse_onehot(consequent_str)
-            print(f"DEBUG: Parsed antecedent='{antecedent}', parsed consequent='{consequent}'") # Debug print
             
             # Corrected: Pass dfLocal to chi_square_for_rule
             chi2, p = chi_square_for_rule(dfLocal, antecedent, consequent)
@@ -191,7 +187,7 @@ def weather_analysis():
             rule['p_value'] = None
 
     # --- Chi-square Test: Season vs Crime Type ---
-    contingency1 = pd.crosstab(dfLocal['season'], dfLocal['crime_type']) # Use dfLocal
+    contingency1 = pd.crosstab(dfLocal['season'], dfLocal['crime_type'])
     chi2_1, p_1 = None, None
     if not contingency1.empty and contingency1.shape[0] > 1 and contingency1.shape[1] > 1:
         chi2_1, p_1, _, _ = chi2_contingency(contingency1)
@@ -199,8 +195,8 @@ def weather_analysis():
     # --- Chi-square Test: Season vs Weapon Used ---
     chi2_2, p_2 = None, None
     season_weapon_chart = []
-    if 'weapon_used' in dfLocal.columns: # Use dfLocal
-        contingency2 = pd.crosstab(dfLocal['season'], dfLocal['weapon_used']) # Use dfLocal
+    if 'weapon_used' in dfLocal.columns:
+        contingency2 = pd.crosstab(dfLocal['season'], dfLocal['weapon_used'])
         if not contingency2.empty and contingency2.shape[0] > 1 and contingency2.shape[1] > 1:
             chi2_2, p_2, _, _ = chi2_contingency(contingency2)
             
@@ -264,7 +260,6 @@ def get_cleaned_data_preview():
         'victim_age', 'victim_gender', 'victim_race', 'season', 'is_weekend'
     ]
     
-    # Use safetyDF instead of df
     available_columns = [col for col in display_columns if col in safetyDF.columns]
     
     preview_df = (
@@ -275,3 +270,68 @@ def get_cleaned_data_preview():
     .head(20)
 )
     return preview_df.to_dict(orient='records')
+
+@app.get("/api/hotspot_grid")
+def get_hotspot_grid():
+    """
+    Analyzes crime data to generate a hot spot grid based on latitude and longitude bins.
+    Returns a JSON object with crime counts grouped by geographic bands.
+    """
+    df_grid = df.copy() # Use a copy of the global DataFrame
+
+    # Ensure latitude and longitude columns exist and are numeric
+    if 'latitude' not in df_grid.columns or 'longitude' not in df_grid.columns:
+        raise HTTPException(status_code=400, detail="Latitude or longitude columns not found in data.")
+    
+    # Drop rows with NaN in 'latitude' or 'longitude'
+    df_grid.dropna(subset=['latitude', 'longitude'], inplace=True)
+    
+    if df_grid.empty:
+        raise HTTPException(status_code=400, detail="No valid latitude/longitude data to generate grid.")
+
+    # Define latitude and longitude bins (adjust these values based on your data's geographic spread)
+    min_lat, max_lat = df_grid['latitude'].min(), df_grid['latitude'].max()
+    min_lon, max_lon = df_grid['longitude'].min(), df_grid['longitude'].max()
+
+    # You might want to adjust bin sizes for different granularities
+    lat_bin_size = .01 # e.g., ~1.11 km for lat
+    lon_bin_size = 1 # e.g., ~0.9 km for lon at 34 deg latitude
+
+    lat_bins = np.arange(np.floor(min_lat * 100) / 100, np.ceil(max_lat * 100) / 100 + lat_bin_size, lat_bin_size)
+    lon_bins = np.arange(np.floor(min_lon * 100) / 100, np.ceil(max_lon * 100) / 100 + lon_bin_size, lon_bin_size)
+
+    # Bin the data
+    df_grid['lat_bin'] = pd.cut(df_grid['latitude'], bins=lat_bins, include_lowest=True, precision=2)
+    df_grid['lon_bin'] = pd.cut(df_grid['longitude'], bins=lon_bins, include_lowest=True, precision=2)
+
+    # Count crimes per lat/lon bin
+    grid_counts = df_grid.groupby(['lat_bin', 'lon_bin']).size().unstack(fill_value=0)
+
+    # Convert to a list of dictionaries for JSON output
+    output_grid = []
+    for lat_band, row in grid_counts.iterrows():
+        # Format lat_band to a readable string (e.g., "34.00 - 34.01")
+        if pd.isna(lat_band):
+            lat_band_str = "Unknown Lat"
+        else:
+            lat_band_str = f"{lat_band.left:.2f} - {lat_band.right:.2f}"
+            
+        values_dict = {}
+        for lon_band, count in row.items():
+            if pd.isna(lon_band):
+                lon_band_str = "Unknown Lon"
+            else:
+                lon_band_str = f"{lon_band.left:.2f}" # Using just the left bound for simplicity, can adjust
+            values_dict[lon_band_str] = int(count)
+
+        # Filter out rows with no crime data
+        if any(v > 0 for v in values_dict.values()):
+            output_grid.append({
+                "lat_band": lat_band_str,
+                "values": values_dict
+            })
+    
+    # Sort output grid by latitude band for consistent display
+    output_grid.sort(key=lambda x: float(x['lat_band'].split(' ')[0]))
+
+    return {"grid": output_grid}

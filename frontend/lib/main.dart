@@ -60,32 +60,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   //Set up variables for controlling receipt of message, scrolling, and typing bubble
-  final TextEditingController _controller = TextEditingController();
-  final ScrollController scroller=ScrollController();
-
-  //Auto-scroll to the bottom with new messages
-  void scrollToBottom(){
-    WidgetsBinding.instance.addPostFrameCallback((_){
-      if(scroller.hasClients){
-        scroller.animateTo(scroller.position.maxScrollExtent, 
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  //Format DTG correctly
-  String formatTime(DateTime time){
-    final now=DateTime.now();
-    if(time.day==now.day && time.month==now.month && time.year==now.year){
-      return "${time.hour.toString().padLeft(2,'0')}:${time.minute.toString().padLeft(2,'0')}";
-    }
-    else{
-      return "${time.month}/${time.day} ${time.hour.toString().padLeft(2,'0')}:${time.minute.toString().padLeft(2,'0')}";
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

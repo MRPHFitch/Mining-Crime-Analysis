@@ -59,6 +59,7 @@ class _ChartsPageState extends State<ChartsPage> {
         }),
       );
 
+      if(!mounted) return;
       if (hotspotsResp.statusCode == 200) {
         final data = json.decode(hotspotsResp.body) as Map<String, dynamic>;
         final centroids = data['centroids'] as List<dynamic>;
