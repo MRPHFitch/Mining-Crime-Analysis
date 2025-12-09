@@ -1,5 +1,20 @@
 # Mining-Crime-Analysis
 
+## Data Preprocessing 
+The project uses two datasets from Kaggle. To prevent potential filepath issues and keeping clean/efficient code in mind, you can access the datasets without manually downloading the datasets onto your local machine. This is possible with the Kaggle API. If it is preferred to use a manually downloaded dataset, adjust the 'USING_KAGGLEHUB' variable to 'False' and hardcode the filepaths to both datasets. Otherwise, execute the script as is. 
+> python3 preprocess_data.py
+
+## Kaggle API setup 
+Install the Kaggle library
+> pip install kaggle
+Obtain your Kaggle API credentials.
+A kaggle.json file is generated when you create a new Kaggle API token. This file will hold your username and API key. 
+Save this file to:
+- Linux/macOS: ~/.kaggle/
+- Windows: C:Users\username\ .kaggle\
+Run the data preprocessing script
+> python3 preprocess_data.py
+
 ## How to run everything E2E (API + Flutter):
 
 ### Backend (FastAPI)
