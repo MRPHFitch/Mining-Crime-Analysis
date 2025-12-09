@@ -7,6 +7,7 @@ The project uses two datasets from Kaggle. To prevent potential filepath issues 
 ## Kaggle API setup 
 Install the Kaggle library
 > pip install kaggle
+
 Obtain your Kaggle API credentials.
 A kaggle.json file is generated when you create a new Kaggle API token. This file will hold your username and API key. 
 Save this file to:
