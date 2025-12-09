@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pandas as pd
 import numpy as np
+import traceback
+from sequence_mining import run_crime_sequence_mining
 from scipy.stats import chi2_contingency
 from typing import Optional
 from kmeans import run_hotspot_kmeans
@@ -381,4 +383,39 @@ def get_time_of_day()-> dict[str, int]:
             hour_buckets[label] = int(count)
 
     return hour_buckets
-    
+
+@app.get("/api/crime_sequences")
+def get_crime_sequences(
+    min_support: float = 0.01,
+    time_window_hours: int = 24,
+    area_col: str = "area_name",
+    grouping_method: str = "spatial_temporal",
+    max_patterns: int = 50,
+):
+    """
+    Run crime sequence mining algo from sequence_mining.py.
+    """
+    try:
+        df_local=df.copy()
+        if grouping_method == "area_based" and area_col not in df_local.columns:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Grouping method '{grouping_method}' requires '{area_col}' column, but it's missing."
+            )
+        if df_local.empty:
+            raise HTTPException(status_code=404, detail="Crime dataset is empty.")
+
+        result = run_crime_sequence_mining(
+            df_local,
+            min_support=min_support,
+            time_window_hours=time_window_hours,
+            area_col=area_col,
+            grouping_method=grouping_method,
+            max_patterns=max_patterns,
+        )
+
+        return result
+
+    except Exception as e:
+        print(f"ERROR in /api/crime_sequences: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
