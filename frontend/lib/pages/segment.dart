@@ -1,4 +1,3 @@
-// File: /Users/Phoo/Classes/Data Mining/Project/Mining-Crime-Analysis/frontend/lib/pages/segment.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -165,7 +164,7 @@ class _SegmentPageState extends State<SegmentPage> {
                       'Cluster Counts:',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    ...?(_kmeansResult!['counts'] as Map<String, dynamic>).entries.map((entry) {
+                    ...(_kmeansResult!['counts'] as Map<String, dynamic>).entries.map((entry) {
                       return Padding(
                         padding: const EdgeInsets.only(left: 8.0),
                         child: Text('  Cluster ${entry.key}: ${entry.value} crimes'),
@@ -176,7 +175,7 @@ class _SegmentPageState extends State<SegmentPage> {
                       'Centroids (Hotspot Locations and Times):',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    ...?(_kmeansResult!['centroids'] as List<dynamic>).map((centroid) {
+                    ...(_kmeansResult!['centroids'] as List<dynamic>).map((centroid) {
                       final double hour = _decodeCyclical(centroid['hour_sin'], centroid['hour_cos'], 24);
                       final double dowValue = _decodeCyclical(centroid['dow_sin'], centroid['dow_cos'], 7);
                       final List<String> dowNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
