@@ -279,7 +279,8 @@ def run_crime_sequence_mining(
     time_window_hours: int = 24,
     area_col: Optional[str] = None,
     grouping_method: str = 'area_based',
-    max_patterns: int = 50
+    max_patterns: int = 50, 
+    min_pattern_length: int = 2 
 ) -> Dict:
 
     # Prepare sequences
@@ -318,6 +319,7 @@ def run_crime_sequence_mining(
         'avg_sequence_length': round(np.mean([len(s) for s in sequences]), 2),
         'max_sequence_length': max([len(s) for s in sequences]),
         'min_support_threshold': min_support,
+        'min_pattern_length': min_pattern_length, 
         'time_window_hours': time_window_hours,
         'grouping_method': grouping_method
     }
@@ -344,7 +346,8 @@ if __name__ == "__main__":
         min_support=0.005,
         time_window_hours=48,
         grouping_method='area_based', #temporal_only, area_based, spatial_temporal
-        max_patterns=20
+        max_patterns=20, 
+        min_pattern_length=2
     )
     
     print(f"Statistics:")
@@ -357,3 +360,16 @@ if __name__ == "__main__":
         print(f"{i:2d}. {crimes}")
         print(f"    Support: {pattern['support_count']} sequences ({pattern['support_pct']}%)")
         print()
+
+    # debugging 
+    print("\n debug, see first 5 sequences")
+    sequences, _ = prepare_crime_sequences(
+        df,
+        time_window_hours=48,
+        area_col='AREA',
+        grouping_method='area_based'
+    )
+    for i, seq in enumerate(sequences[:5], 1):
+        crimes_display = ' → '.join(seq[:5]) + ('...' if len(seq) > 5 else '')
+        print(f"{i}. Length {len(seq)}: {crimes_display}")
+
