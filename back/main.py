@@ -11,7 +11,7 @@ from mlxtend.frequent_patterns import apriori, association_rules
 
 app = FastAPI()
 
-# Load your dataset (FIX PATH)
+# Load your dataset
 df = pd.read_csv('../crime_data_cleaned.csv')
 safetyDF = pd.read_csv('../crime_safety_cleaned.csv')
 
@@ -52,7 +52,7 @@ def chi_square_for_rule(df_local_param, antecedent, consequent):
     chi2, p, _, _ = chi2_contingency(table)
     return chi2, p
 
-# Define parse_onehot function globally (with fix)
+# Define parse_onehot function globally
 def parse_onehot(item_string: str):
     """
     Parses a one-hot encoded item string (e.g., 'column_name_value')
@@ -69,7 +69,6 @@ def parse_onehot(item_string: str):
         # This could happen if the column itself was boolean and passed directly
         # or if there's a single item not generated from pd.get_dummies
         return (item_string, True) # Risky, but better than an immediate crash
-                                   # Consider handling this case as an error if it shouldn't happen.
 
 # Cluster crimes into hotspots using K-Means on latitude, longitude, and cyclical time features
 @app.post("/api/hotspots")
@@ -96,8 +95,8 @@ def hotspots(request: HotspotRequest):
 def seasonal_crime_patterns():
     # It's better to work on a copy of the global df for modifications within an endpoint
     df_local_seasons = df.copy()
-    df_local_seasons['date'] = pd.to_datetime(df_local_seasons['date']) # Use df_local_seasons
-    df_local_seasons['season'] = df_local_seasons['date'].dt.month.apply(get_season) # Use df_local_seasons
+    df_local_seasons['date'] = pd.to_datetime(df_local_seasons['date'])
+    df_local_seasons['season'] = df_local_seasons['date'].dt.month.apply(get_season)
     # Group by season and crime_type, count occurrences
     season_crime = df_local_seasons.groupby(['season', 'crime_type']).size().reset_index(name='count')
     # Group by season and weapon used, count occurrences
@@ -113,9 +112,13 @@ def seasonal_crime_patterns():
 @app.get("/api/weather_analysis")
 def weather_analysis():
     dfLocal = df.copy() # Use a local copy
+    # safetyLocal=safetyDF.copy()
     # Add season column
     dfLocal['date'] = pd.to_datetime(dfLocal['date'])
-    dfLocal['season'] = dfLocal['date'].dt.month.apply(get_season)
+    # dfLocal['season'] = dfLocal['date'].dt.month.apply(get_season)
+    # # Add season column
+    # safetyLocal['date'] = pd.to_datetime(dfLocal['date'])
+    # safetyLocal['season'] = safetyLocal['date'].dt.month.apply(get_season)
     
     if dfLocal.empty:
         raise HTTPException(status_code=400, detail="Dataset is empty after date processing.")
@@ -164,7 +167,7 @@ def weather_analysis():
         apriori_results = processed_rules_df.to_dict(orient='records')
       
         #Extract the Top 5 rules
-        top5_df = processed_rules_df.head(5).copy() # Use processed_rules_df
+        top5_df = processed_rules_df.head(5).copy()
         top5 = top5_df.to_dict(orient='records')
         
     except Exception as e:
@@ -248,7 +251,7 @@ def weather_analysis():
       }
     }
     
-# Add a new endpoint to preview the cleaned data
+# Endpoint to preview the cleaned data
 @app.get("/api/cleaned_data_preview")
 def get_cleaned_data_preview():
     """
@@ -296,8 +299,8 @@ def get_hotspot_grid():
     min_lon, max_lon = df_grid['longitude'].min(), df_grid['longitude'].max()
 
     # You might want to adjust bin sizes for different granularities
-    lat_bin_size = .05 # e.g., ~1.11 km for lat
-    lon_bin_size = .05 # e.g., ~0.9 km for lon at 34 deg latitude
+    lat_bin_size = .05
+    lon_bin_size = .05
 
     lat_bins = np.arange(np.floor(min_lat * 100) / 100, np.ceil(max_lat * 100) / 100 + lat_bin_size, lat_bin_size)
     lon_bins = np.arange(np.floor(min_lon * 100) / 100, np.ceil(max_lon * 100) / 100 + lon_bin_size, lon_bin_size)
@@ -323,7 +326,7 @@ def get_hotspot_grid():
             if pd.isna(lon_band):
                 lon_band_str = "Unknown Lon"
             else:
-                lon_band_str = f"{lon_band.left:.2f}" # Using just the left bound for simplicity, can adjust
+                lon_band_str = f"{lon_band.left:.2f}" # Using just the left bound for simplicity
             values_dict[lon_band_str] = int(count)
 
         # Filter out rows with no crime data

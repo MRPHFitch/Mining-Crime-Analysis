@@ -50,7 +50,7 @@ class _SegmentPageState extends State<SegmentPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/api/hotspots'), // Your FastAPI backend URL
+        Uri.parse('http://127.0.0.1:8000/api/hotspots'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'k': k,
@@ -117,8 +117,7 @@ class _SegmentPageState extends State<SegmentPage> {
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center, // Centers the text within the field
                   decoration: const InputDecoration(
-                    // labelText: 'Number of Hot spots (K)', // Removed labelText
-                    hintText: '5', // Shorter hint for a compact field
+                    hintText: '5',
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(
                       vertical: 10.0,

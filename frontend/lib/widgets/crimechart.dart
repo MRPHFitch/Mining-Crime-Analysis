@@ -31,7 +31,6 @@ Widget buildCrimeBarChart(BuildContext context, List dataList, {required String 
   };
 
   // Group counts by category and then by season
-  // Map<CategoryName, Map<SeasonName, Count>>
   final Map<String, Map<String, double>> countsPerCategoryPerSeason = {};
   for (var item in dataList) {
     final category = mapCategoryValue(item[categoryKey], categoryKey);
@@ -213,7 +212,7 @@ Widget buildCrimeBarChart(BuildContext context, List dataList, {required String 
                     touchTooltipData: BarTouchTooltipData(
                       tooltipPadding: const EdgeInsets.all(8),
                       tooltipMargin: 8,
-                      getTooltipColor: (group) => Colors.blueGrey, // NEW way to set bg color,
+                      getTooltipColor: (group) => Colors.blueGrey,
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
                         final category = displayedCategoryNames[group.x.toInt()];
                         final season = orderedSeasons[rodIndex];
@@ -314,7 +313,7 @@ Widget buildAprioriRulesBarChart(List topRulesChart, {required String metric}) {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                interval: (maxY / 4).ceilToDouble(), // Show 4-5 labels on Y-axis
+                interval: (maxY / 4).ceilToDouble(), // Show desired num labels on Y-axis
                 getTitlesWidget: (value, meta) {
                   return Text(
                     value.toStringAsFixed(2), // Show value with 2 decimal places
@@ -343,7 +342,7 @@ Widget buildGenericHeatmap({
   required String primaryKey, // e.g., 'season'
   required String valueMapKey, // e.g., 'crime_counts' or 'weapon_counts'
   String? title,
-  double maxColorValue = 1000, // Default max value; adjust based on your data's actual max counts
+  double maxColorValue = 1000,
   Color baseColor = Colors.cyan,
 }) {
   if (data.isEmpty) {

@@ -33,6 +33,7 @@ class _DataPageState extends State<DataPage> {
     }
   }
 
+  //List out a preview of some of the data used
   @override
   Widget build(BuildContext context) {
     return Scaffold(

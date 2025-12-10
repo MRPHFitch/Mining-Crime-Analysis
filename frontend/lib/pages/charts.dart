@@ -27,6 +27,7 @@ class _ChartsPageState extends State<ChartsPage> {
     super.initState();
   }
 
+  //Load up the data in such a way that you generate its creation not instant appearance
   Future<void> _loadData() async {
     setState(() {
       _loading = true;
@@ -49,6 +50,7 @@ class _ChartsPageState extends State<ChartsPage> {
         }),
       );
 
+      //Retrieve the hot spot values
       if(!mounted) return;
       if (hotspotsResp.statusCode == 200) {
         final data = json.decode(hotspotsResp.body) as Map<String, dynamic>;
@@ -69,7 +71,7 @@ class _ChartsPageState extends State<ChartsPage> {
       } else {
         _error = 'Hotspots request failed (${hotspotsResp.statusCode})';
       }
-
+      //Retrieve the hot spot grid
       final gridResp = await http.get(Uri.parse('$baseUrl/api/hotspot_grid'));
       if(!mounted) return;
       if (gridResp.statusCode == 200) {
@@ -112,7 +114,7 @@ class _ChartsPageState extends State<ChartsPage> {
         elevation: 2,
         child: SizedBox(
           height: 320,
-          child: _buildHotspotMap(_hotspots), // This function already handles empty data internally
+          child: _buildHotspotMap(_hotspots),
         ),
       ),
       const SizedBox(height: 24),

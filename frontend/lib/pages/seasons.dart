@@ -226,10 +226,10 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
         Center(child:Text('Exploratory Analysis', style: Theme.of(context).textTheme.headlineSmall)),
         const SizedBox(height: 16),
         Center(child:Text('Crime Types by Season', style: const TextStyle(fontWeight: FontWeight.bold))),
-        buildCrimeBarChart(context, seasonCrime, categoryKey: 'crime_type'), // Pass context
+        buildCrimeBarChart(context, seasonCrime, categoryKey: 'crime_type'),
         const SizedBox(height: 16),
         Center(child:Text('Weapon Usage by Season', style: const TextStyle(fontWeight: FontWeight.bold))),
-        buildCrimeBarChart(context, seasonWeapon, categoryKey: 'weapon_used'), // Pass context
+        buildCrimeBarChart(context, seasonWeapon, categoryKey: 'weapon_used'),
         const SizedBox(height: 24),
         const Divider(),
         const SizedBox(height: 24),
@@ -266,7 +266,7 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
     );
   }
 
-  // Mining graphs for the "Graphs" tab (currently placeholders)
+  // Mining graphs for the "Graphs" tab
   Widget _buildMiningGraphs(Map<String, dynamic> miningData) {
     final globalRelationships = miningData['charts']['global_relationships'] as Map<String, dynamic>;
     final top5RulesChart = miningData['charts']['top_5_rules_chart'] as List;
@@ -291,7 +291,7 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
           primaryKey: 'season',
           valueMapKey: 'crime_counts',
           title: 'Crime Types by Season',
-          maxColorValue: 1000, // <<-- ADJUST THIS VALUE based on maximum crime counts in your data
+          maxColorValue: 1000,
         ),
         const SizedBox(height: 16),
         Center(child:Text('Season and Weapon Used Heatmap', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
@@ -301,7 +301,7 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
           primaryKey: 'season',
           valueMapKey: 'weapon_counts',
           title: 'Weapon Usage by Season',
-          maxColorValue: 500, // <<--ADJUST THIS VALUE based on maximum weapon usage counts in your data
+          maxColorValue: 500,
         ),
         const SizedBox(height: 16),
         Center(child:Text('Top 5 Apriori Rules (Lift)', style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 16))),
@@ -321,7 +321,7 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
     return Scaffold(
       appBar: AppBar(
         title: const Text('Seasonal Crime Patterns'),
-        bottom: TabBar( // Added TabBar to the AppBar
+        bottom: TabBar(
           controller: _tabController,
           tabs: const [
             Tab(text: 'Tables'),
@@ -340,7 +340,7 @@ class _SeasonsPageState extends State<SeasonsPage> with SingleTickerProviderStat
             return const Center(child: Text('No data'));
           }
           final exploratory = snapshot.data!;
-          return TabBarView( // Added TabBarView to the body
+          return TabBarView(
             controller: _tabController,
             children: [
               // Tab 1: Tables View

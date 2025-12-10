@@ -59,12 +59,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  //Set up variables for controlling receipt of message, scrolling, and typing bubble
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Crime Analysis"),
+        title: const Text("Crime Analysis"),  //Set the title for the page
         centerTitle: true,
         actions: [
           IconButton(
@@ -73,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
           )
         ]
       ),
+      //List out each of the options
       body: ListView(
         children: [
           ListTile(
