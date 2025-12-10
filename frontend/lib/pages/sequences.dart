@@ -108,109 +108,133 @@ class _SequencesPageState extends State<SequencesPage> {
       appBar: AppBar(title: const Text("Recurring Crime Sequences")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Text(
-                'Min. Support Threshold',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: SizedBox(
-                width: 70.0,
-                child: TextField(
-                  controller: _minSupportController,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  decoration: const InputDecoration(
-                    hintText: '0.01',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: Text(
-                'Time Window (hours)',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: SizedBox(
-                width: 70.0,
-                child: TextField(
-                  controller: _timeWindowController,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  decoration: const InputDecoration(
-                    hintText: '24',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: Text(
-                'Grouping Method',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: DropdownButton<String>(
-                value: _selectedGroupingMethod,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedGroupingMethod = newValue!;
-                  });
-                },
-                items: _groupingMethods.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  side: BorderSide(color: Theme.of(context).primaryColor, width: 2),
-                ),
-                onPressed: _isLoading ? null : _runSequenceMining,
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Run Sequence Mining'),
-              ),
-            ),
-            if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 16.0),
+        child: SingleChildScrollView( // This already wraps the content, so inner Expanded is redundant
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
                 child: Text(
-                  'Error: $_errorMessage',
-                  style: const TextStyle(color: Colors.red),
+                  'Min. Support Threshold',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-            const SizedBox(height: 24),
-            // Display results only if they are available
-            if (_sequencesResult != null)
-              Expanded(
-                child: _sequencesResult!['patterns'] == null || (_sequencesResult!['patterns'] as List).isEmpty
-                    ? const Center(child: Text("No frequent sequences found with current parameters."))
+              const SizedBox(height: 8),
+              Center(
+                child: SizedBox(
+                  width: 70.0,
+                  child: TextField(
+                    controller: _minSupportController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: const InputDecoration(
+                      hintText: '0.01',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: 10.0,
+                        horizontal: 8.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  'Time Window (hours)',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: SizedBox(
+                  width: 70.0,
+                  child: TextField(
+                    controller: _timeWindowController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: const InputDecoration(
+                      hintText: '24',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: 10.0,
+                        horizontal: 8.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  'Grouping Method',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: DropdownButton<String>(
+                  value: _selectedGroupingMethod,
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedGroupingMethod = newValue!;
+                    });
+                  },
+                  items: _groupingMethods.map<DropdownMenuItem<String>>((
+                    String value,
+                  ) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    side: BorderSide(
+                      color: Theme.of(context).primaryColor,
+                      width: 2,
+                    ),
+                  ),
+                  onPressed: _isLoading ? null : _runSequenceMining,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('Run Sequence Mining'),
+                ),
+              ),
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: Text(
+                    'Error: $_errorMessage',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              // Display results only if they are available
+              if (_sequencesResult != null)
+                // REMOVED 'Expanded' widget here
+                _sequencesResult!['patterns'] == null ||
+                    (_sequencesResult!['patterns'] as List).isEmpty
+                    ? const Center(
+                        child: Text(
+                          "No frequent sequences found with current parameters.",
+                        ),
+                      )
                     : ListView.builder(
-                        itemCount: (_sequencesResult!['patterns'] as List).length,
+                        // ADDED shrinkWrap and NeverScrollableScrollPhysics
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(), 
+                        itemCount:
+                            (_sequencesResult!['patterns'] as List).length,
                         itemBuilder: (context, index) {
-                          final pattern = (_sequencesResult!['patterns'] as List)[index];
-                          final crimes = (pattern["pattern"] as List).join(" → ");
+                          final pattern =
+                              (_sequencesResult!['patterns'] as List)[index];
+                          final crimes = (pattern["pattern"] as List).join(
+                            " → ",
+                          );
                           final support = pattern["support_pct"];
 
                           return Card(
@@ -222,18 +246,21 @@ class _SequencesPageState extends State<SequencesPage> {
                           );
                         },
                       ),
-              ),
-            // Message when no results yet
-            if (!_isLoading && _sequencesResult == null && _errorMessage == null)
-              const Expanded(
-                child: Center(
+              // Message when no results yet
+              if (!_isLoading &&
+                  _sequencesResult == null &&
+                  _errorMessage == null)
+                // REMOVED 'Expanded' widget here
+                const Center(
                   child: Padding(
                     padding: EdgeInsets.all(16.0),
-                    child: Text('Enter parameters and press "Run Sequence Mining" to see results.'),
+                    child: Text(
+                      'Enter parameters and press "Run Sequence Mining" to see results.',
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
