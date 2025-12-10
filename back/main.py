@@ -387,6 +387,59 @@ def get_time_of_day()-> dict[str, int]:
 
     return hour_buckets
 
+# Define a Pydantic model for the sequence mining request parameters
+class SequenceMiningRequest(BaseModel):
+    min_support: float = 0.01
+    time_window_hours: int = 24
+    grouping_method: str = 'spatial_temporal'
+    area_col: Optional[str] = None # Optional, will default to 'area_name' if needed
+
+# Change this from @app.get to @app.post and update parameters
+@app.post("/api/crime_sequences")
+def post_crime_sequences(request: SequenceMiningRequest):
+    """
+    Run crime sequence mining algo from sequence_mining.py with configurable parameters.
+    """
+    try:
+        df_local = df.copy()
+
+        # Handle area_col if grouping_method is 'area_based'
+        effective_area_col = request.area_col
+        if request.grouping_method == "area_based":
+            if effective_area_col is None:
+                # Assuming 'area_name' is the default column for area-based grouping
+                effective_area_col = 'area_name'
+                # Check if 'area_name' exists in the DataFrame
+                if effective_area_col not in df_local.columns:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Grouping method 'area_based' requires an area_col. "
+                               "Default 'area_name' not found, please specify one."
+                    )
+            elif effective_area_col not in df_local.columns:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Specified area_col '{effective_area_col}' not found in data."
+                )
+        
+        if df_local.empty:
+            raise HTTPException(status_code=404, detail="Crime dataset is empty.")
+
+        result = run_crime_sequence_mining(
+            df_local,
+            min_support=request.min_support,
+            time_window_hours=request.time_window_hours,
+            area_col=effective_area_col, # Pass the resolved area_col
+            grouping_method=request.grouping_method,
+            max_patterns=50, # Keeping this fixed for now, can be made configurable
+        )
+        
+        return result
+
+    except Exception as e:
+        print(f"ERROR in /api/crime_sequences: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+                    
 @app.get("/api/crime_sequences")
 def get_crime_sequences(
     min_support: float = 0.01,
