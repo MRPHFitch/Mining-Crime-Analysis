@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import traceback
+from weather_analysis import get_season, run_seasonal_analysis
 from sequence_mining import run_crime_sequence_mining
 from scipy.stats import chi2_contingency
 from typing import Optional
@@ -35,6 +36,9 @@ class HotspotRequest(BaseModel):
     time_col: Optional[str] = None
     lat_col: Optional[str] = None
     lon_col: Optional[str] = None
+    
+class AprioriRequest(BaseModel):
+    dataset_name: str # 'crime_data' or 'safety_data'
 
 # Renamed df to df_local_param to avoid shadowing global df
 def chi_square_for_rule(df_local_param, antecedent, consequent):
@@ -109,147 +113,34 @@ def seasonal_crime_patterns():
         "season_weapon": season_weapon if isinstance(season_weapon, list) else season_weapon.to_dict(orient='records')
     }
 
-@app.get("/api/weather_analysis")
-def weather_analysis():
-    dfLocal = df.copy() # Use a local copy
-    # safetyLocal=safetyDF.copy()
-    # Add season column
-    dfLocal['date'] = pd.to_datetime(dfLocal['date'])
-    # dfLocal['season'] = dfLocal['date'].dt.month.apply(get_season)
-    # # Add season column
-    # safetyLocal['date'] = pd.to_datetime(dfLocal['date'])
-    # safetyLocal['season'] = safetyLocal['date'].dt.month.apply(get_season)
-    
-    if dfLocal.empty:
-        raise HTTPException(status_code=400, detail="Dataset is empty after date processing.")
-    if len(dfLocal) < 10: # Minimum records for Apriori and meaningful stats
-        raise HTTPException(status_code=400, detail="Dataset not large enough for Apriori (min 10 rows recommended).")
-    
-    # --- Apriori Algorithm ---
-    # Prepare data for Apriori (one-hot encoding)
-    # Ensure all columns exist before selecting
-    cols_for_apriori = []
-    if 'season' in dfLocal.columns: cols_for_apriori.append('season')
-    if 'crime_type' in dfLocal.columns: cols_for_apriori.append('crime_type')
-    if 'weapon_used' in dfLocal.columns: cols_for_apriori.append('weapon_used')
+@app.post("/api/weather_analysis")
+def weather_analysis(request: AprioriRequest):
+    selected_df = None
+    if request.dataset_name == "crime_data":
+        selected_df = df.copy()
+    elif request.dataset_name == "safety_data":
+        selected_df = safetyDF.copy()
+    else:
+        raise HTTPException(status_code=400, detail="Invalid dataset_name. Choose 'crime_data' or 'safety_data'.")
 
-    if not cols_for_apriori:
-        raise HTTPException(status_code=400, detail='No relevant columns found for Apriori analysis.')
-
-    apriori_df = dfLocal[cols_for_apriori].astype(str)
-    onehot = pd.get_dummies(apriori_df)
-    
-    if onehot.empty:
-        raise HTTPException(status_code=400, detail='No suitable data for Apriori after encoding.')
-    
-    frequent_itemsets_df = pd.DataFrame()
-    rules_df = pd.DataFrame()
-    apriori_results = [] # Initialize as empty list for output
-    top5 = [] # Initialize as empty list for output
+    if selected_df is None or selected_df.empty:
+        raise HTTPException(status_code=404, detail=f"Dataset '{request.dataset_name}' is empty or not found.")
 
     try:
-        frequent_itemsets_df = apriori(onehot, min_support=0.05, use_colnames=True)
-        if frequent_itemsets_df.empty:
-            raise HTTPException(status_code=400, detail='No frequent item sets with min_support=0.05. Consider lowering it or checking data.')
-            
-        rules_df = association_rules(frequent_itemsets_df, metric="lift", min_threshold=1)
-        if rules_df.empty:
-            raise HTTPException(status_code=400, detail='No association rules found with min_threshold=1. Consider lowering it or checking data.')
-        
-        #Sort by the strongest association first
-        rules_df = rules_df.sort_values(by='lift', ascending=False)
-    
-        # Simplify rules for output
-        processed_rules_df = rules_df[['antecedents', 'consequents', 'support', 'confidence', 'lift']].copy()
-        processed_rules_df['antecedents'] = processed_rules_df['antecedents'].apply(lambda x: list(x))
-        processed_rules_df['consequents'] = processed_rules_df['consequents'].apply(lambda x: list(x))
-        
-        apriori_results = processed_rules_df.to_dict(orient='records')
-      
-        #Extract the Top 5 rules
-        top5_df = processed_rules_df.head(5).copy()
-        top5 = top5_df.to_dict(orient='records')
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Error during Apriori analysis: {e}.')
-    
-    # --- Annotate each rule with chi-square ---
-    for rule in apriori_results:
-        # Only handle single antecedent/consequent for chi-square
-        if len(rule['antecedents']) == 1 and len(rule['consequents']) == 1:
-            antecedent_str = rule['antecedents'][0]
-            consequent_str = rule['consequents'][0]
-            
-            antecedent = parse_onehot(antecedent_str)
-            consequent = parse_onehot(consequent_str)
-            
-            # Corrected: Pass dfLocal to chi_square_for_rule
-            chi2, p = chi_square_for_rule(dfLocal, antecedent, consequent)
-            rule['chi2'] = chi2
-            rule['p_value'] = p
-        else:
-            rule['chi2'] = None
-            rule['p_value'] = None
+        # Call the run_seasonal_analysis function from weather_analysis.py with the selected DataFrame
+        return run_seasonal_analysis(selected_df)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Error in seasonal analysis: {exc}")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f'Internal server error during seasonal analysis: {exc}')
 
-    # --- Chi-square Test: Season vs Crime Type ---
-    contingency1 = pd.crosstab(dfLocal['season'], dfLocal['crime_type'])
-    chi2_1, p_1 = None, None
-    if not contingency1.empty and contingency1.shape[0] > 1 and contingency1.shape[1] > 1:
-        chi2_1, p_1, _, _ = chi2_contingency(contingency1)
-
-    # --- Chi-square Test: Season vs Weapon Used ---
-    chi2_2, p_2 = None, None
-    season_weapon_chart = []
-    if 'weapon_used' in dfLocal.columns:
-        contingency2 = pd.crosstab(dfLocal['season'], dfLocal['weapon_used'])
-        if not contingency2.empty and contingency2.shape[0] > 1 and contingency2.shape[1] > 1:
-            chi2_2, p_2, _, _ = chi2_contingency(contingency2)
-            
-    # --- Prepare Chart Data for Frontend ---
-    #Global relationships (heatmap-like data)
-    season_crime_chart = []
-    if not contingency1.empty:
-        season_crime_chart = [{
-                "season": season,
-                "crime_counts": contingency1.loc[season].to_dict()
-            }
-            for season in contingency1.index
-        ]
-    season_weapon_chart = [{
-        "season": season,
-        "weapon_counts": contingency2.loc[season].to_dict()
-        }
-        for season in contingency2.index
-        ]
-
-    #Top 5 Apriori rules for bar chart
-    top_rules_chart = []
-    if top5: # Check if top5 is not empty
-        top_rules_chart = [
-            {"rule": f"{', '.join(row['antecedents'])} \u2192 {', '.join(row['consequents'])}",
-             "lift": row["lift"], "confidence": row["confidence"]}
-            for row in top5
-        ]
-
-    return {
-        "summary": {
-            "n_records": len(dfLocal),
-            "n_rules": len(apriori_results)
-        },
-        "apriori_rules": apriori_results,
-        "top 5 rules": top5,
-        "chi_square": {
-            "season_vs_crime_type": {"chi2": chi2_1, "p_value": p_1},
-            "season_vs_weapon_used": {"chi2": chi2_2, "p_value": p_2}
-        },
-        "charts": {
-          "global_relationships": {
-              "season_vs_crime_type": season_crime_chart,
-              "season_vs_weapon_used": season_weapon_chart
-          },
-          "top_5_rules_chart": top_rules_chart
-      }
-    }
+    # try:
+    #     # Call the refactored function
+    #     return run_seasonal_analysis(df)
+    # except ValueError as exc:
+    #     raise HTTPException(status_code=400, detail=str(exc))
+    # except Exception as exc:
+    #     raise HTTPException(status_code=500, detail=f'Error during seasonal analysis: {exc}')
     
 # Endpoint to preview the cleaned data
 @app.get("/api/cleaned_data_preview")
