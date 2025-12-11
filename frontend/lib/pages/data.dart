@@ -97,7 +97,7 @@ class _DataPageState extends State<DataPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Data Used for Analysis')),
+      appBar: AppBar(title: const Text('Data Used')),
       body: FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
         future: _allDataPreviewsFuture,
         builder: (context, snapshot) {
@@ -118,7 +118,7 @@ class _DataPageState extends State<DataPage> {
               child: Column(
                 children: [
                   _buildDataTable('Crime Data Preview', crimeData),
-                  _buildDataTable('Crime Safety Data Preview', safetyData),
+                  _buildDataTable('Crime Safety Preview', safetyData),
                 ],
               ),
             ),
