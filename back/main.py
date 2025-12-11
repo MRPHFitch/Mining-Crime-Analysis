@@ -272,8 +272,39 @@ def get_cleaned_data_preview():
     .assign(date=lambda df: pd.to_datetime(df['date'], errors='coerce'))
     .sort_values('date')
     .assign(date=lambda df: df['date'].dt.strftime('%Y-%m-%d'))
-    .head(20)
+    .head(5)
 )
+    return preview_df.to_dict(orient='records')
+
+#Endpoint for other data preview
+@app.get("/api/crime_data_preview")
+def get_crime_data_preview():
+    """
+    Returns the first 5 rows of the main crime data (df).
+    """
+    if df.empty:
+        raise HTTPException(status_code=404, detail="Main crime data is not available.")
+
+    # These columns should exist in crime_data_cleaned.csv as per preprocess_data.py
+    display_columns = [
+        'date','crime_type', 'latitude', 'longitude', 'weapon_used',
+        'is_weekend', 'time_period', 'season'
+    ]
+
+    available_columns = [col for col in display_columns if col in df.columns]
+
+    preview_df = (
+        df[available_columns]
+        .assign(date=lambda df_inner: pd.to_datetime(df_inner['date'], errors='coerce'))
+        .sort_values('date')
+        .assign(date=lambda df_inner: df_inner['date'].dt.strftime('%Y-%m-%d'))
+        .head(5)
+    )
+    #Replace NaN values in float columns with None
+    for col in preview_df.select_dtypes(include=[np.number]).columns:
+        if preview_df[col].isnull().any():
+            preview_df[col] = preview_df[col].replace({np.nan: None})
+
     return preview_df.to_dict(orient='records')
 
 @app.get("/api/hotspot_grid")
